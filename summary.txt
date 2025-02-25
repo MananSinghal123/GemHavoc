@@ -1,0 +1,2483 @@
+Project Path: components
+
+Source Tree:
+
+```
+components
+├── List.jsx
+├── Gameboard.jsx
+├── ui
+│   ├── tooltip.jsx
+│   ├── use-toast.jsx
+│   ├── alert.jsx
+│   ├── label.jsx
+│   ├── info.jsx
+│   ├── dropdown-menu.jsx
+│   ├── input.jsx
+│   ├── button.jsx
+│   ├── toast.jsx
+│   ├── dialog.jsx
+│   ├── collapsible.jsx
+│   └── card.jsx
+├── Character.jsx
+├── WalletProvider.jsx
+├── Card.jsx
+├── UI.jsx
+├── AttributeBox.jsx
+├── WalletSelector.jsx
+├── Experience.jsx
+├── Player.jsx
+├── Buy.jsx
+├── Text.jsx
+├── PlayerName.jsx
+├── MarketplaceView.jsx
+├── MobileController.jsx
+└── NftCard.jsx
+
+```
+
+`/home/manan123/aptos-game/src/components/List.jsx`:
+
+```jsx
+import React, { useState } from "react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { APT, APT_UNIT, aptos } from "../utils/aptos";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import {
+  Dialog,
+  DialogCancel,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+
+const List = ({ nftTokenObjectAddr }) => {
+  const { account, signAndSubmitTransaction } = useWallet();
+  const [price, setPrice] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const onRefresh = () => {
+    window.location.reload();
+  };
+
+  const onSubmit = async () => {
+    if (!account) {
+      throw new Error("Wallet not connected");
+    }
+    if (!price) {
+      throw new Error("Price not set");
+    }
+
+    try {
+      console.log("Listing");
+      const response = await signAndSubmitTransaction({
+        sender: account.address,
+        data: {
+          function: `${
+            import.meta.env.VITE_MODULE_ADDRESS
+          }::launchpad::list_with_fixed_price`,
+          typeArguments: [APT],
+          functionArguments: [nftTokenObjectAddr, parseInt(price) * APT_UNIT],
+        },
+      });
+
+      await aptos.waitForTransaction({
+        transactionHash: response.hash,
+      });
+
+      alert("Listed");
+      setIsDialogOpen(false);
+      onRefresh();
+      console.log("Listed");
+    } catch (error) {
+      console.error("Error listing NFT:", error);
+      alert("Failed to list NFT");
+    }
+  };
+
+  return (
+    <div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline">List</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="py-5">List NFT on Marketplace</DialogTitle>
+            <div className="space-y-2">
+              <Label htmlFor="price">Price in APT</Label>
+              <Input
+                id="price"
+                type="number"
+                min="1"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Enter price in APT"
+                className="w-full"
+              />
+            </div>
+            <DialogDescription className="mt-4">
+              Please confirm the listing price. This action cannot be undone
+              once the NFT is listed on the marketplace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogCancel>Cancel</DialogCancel>
+            <Button onClick={onSubmit} variant="default">
+              List NFT
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default List;
+
+```
+
+`/home/manan123/aptos-game/src/components/Gameboard.jsx`:
+
+```jsx
+import {
+  AccumulativeShadows,
+  Gltf,
+  RandomizedLight,
+  useGLTF,
+} from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
+import { motion } from "framer-motion-3d";
+import { useMemo } from "react";
+import { degToRad } from "three/src/math/MathUtils";
+import { useGameEngine } from "../hooks/useGameEngine";
+import { Card } from "./Card";
+import { Player } from "./Player";
+
+export const Gameboard = () => {
+  const viewport = useThree((state) => state.viewport);
+  const scalingRatio = Math.min(1, viewport.width / 12);
+
+  const { deck, gems, players, phase, getCard } = useGameEngine();
+
+  const shadows = useMemo(
+    () => (
+      <AccumulativeShadows
+        temporal
+        frames={35}
+        alphaTest={0.75}
+        scale={100}
+        position={[0, 0.01, 0]}
+        color="#EFBD4E"
+      >
+        <RandomizedLight
+          amount={4}
+          radius={9}
+          intensity={0.55}
+          ambient={0.25}
+          position={[30, 5, -10]}
+        />
+        <RandomizedLight
+          amount={4}
+          radius={5}
+          intensity={0.25}
+          ambient={0.55}
+          position={[-30, 5, -9]}
+        />
+      </AccumulativeShadows>
+    ),
+    []
+  );
+
+  return (
+    <group scale={scalingRatio}>
+      {/* BG */}
+      <Gltf
+        castShadow
+        src="/models/Gameboard.glb"
+        scale={0.8}
+        position-x={-1}
+        position-z={5}
+      />
+      {shadows}
+
+      {/* DECK */}
+      <group position-x={4} position-z={-2}>
+        {deck.map((_, index) => (
+          <motion.group
+            key={index}
+            position-y={index * 0.015}
+            rotation-y={index % 2 ? degToRad(2) : 0}
+            animate={
+              phase === "playerAction" && index === deck.length - 1
+                ? "selected"
+                : ""
+            }
+            variants={{
+              selected: {
+                x: -2,
+                y: 1.5,
+                z: -2,
+                rotateY: degToRad(120),
+                scale: 1.5,
+              },
+            }}
+          >
+            <motion.group
+              rotation-x={degToRad(90)}
+              variants={{
+                selected: {
+                  rotateX: degToRad(-45),
+                },
+              }}
+            >
+              <Card type={getCard() || undefined} />
+            </motion.group>
+          </motion.group>
+        ))}
+      </group>
+      {/* TREASURE */}
+      {[...Array(gems)].map((_, index) => (
+        <Gltf
+          key={index}
+          src="/models/UI_Gem_Blue.gltf"
+          position-x={index * 0.5}
+          position-y={0.25}
+          scale={0.5}
+        />
+      ))}
+      {/* CHARACTERS */}
+      {players.map((player, index) => (
+        <group key={player.id}>
+          <Player index={index} player={player} />
+        </group>
+      ))}
+    </group>
+  );
+};
+
+useGLTF.preload("/models/Gameboard.glb");
+useGLTF.preload("/models/UI_Gem_Blue.gltf");
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/tooltip.jsx`:
+
+```jsx
+import React from "react";
+
+export const Tooltip = ({ children, content, className }) => {
+  const [show, setShow] = React.useState(false);
+  const tooltipRef = React.useRef(null);
+
+  return (
+    <div className="relative inline-block">
+      <div
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      >
+        {children}
+      </div>
+      {show && (
+        <div
+          ref={tooltipRef}
+          className={cn(
+            "absolute z-50 px-2 py-1 text-sm text-white bg-black rounded shadow-lg",
+            className
+          )}
+        >
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/use-toast.jsx`:
+
+```jsx
+// use-toast.jsx
+import React from "react";
+
+const TOAST_LIMIT = 1;
+const TOAST_REMOVE_DELAY = 5000;
+
+export const useToast = () => {
+  const [toasts, setToasts] = React.useState([]);
+
+  const toast = React.useCallback(
+    ({
+      title,
+      description,
+      variant = "default",
+      duration = TOAST_REMOVE_DELAY,
+    }) => {
+      const id = Math.random().toString(36).substr(2, 9);
+
+      const newToast = {
+        id,
+        title,
+        description,
+        variant,
+      };
+
+      setToasts((currentToasts) => [...currentToasts, newToast]);
+
+      if (duration !== Infinity) {
+        setTimeout(() => {
+          setToasts((currentToasts) =>
+            currentToasts.filter((toast) => toast.id !== id)
+          );
+        }, duration);
+      }
+
+      return {
+        id,
+        dismiss: () =>
+          setToasts((currentToasts) =>
+            currentToasts.filter((toast) => toast.id !== id)
+          ),
+        update: (props) =>
+          setToasts((currentToasts) =>
+            currentToasts.map((toast) =>
+              toast.id === id ? { ...toast, ...props } : toast
+            )
+          ),
+      };
+    },
+    []
+  );
+
+  const dismiss = React.useCallback((toastId) => {
+    setToasts((currentToasts) =>
+      toastId ? currentToasts.filter((toast) => toast.id !== toastId) : []
+    );
+  }, []);
+
+  return {
+    toasts: toasts.slice(0, TOAST_LIMIT),
+    toast,
+    dismiss,
+  };
+};
+
+// ToastProvider.jsx
+export const ToastProvider = ({ children }) => {
+  const { toasts } = useToast();
+
+  return (
+    <>
+      {children}
+      <div className="fixed top-0 right-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} {...toast} />
+        ))}
+      </div>
+    </>
+  );
+};
+
+// Toast component (used by ToastProvider)
+const Toast = ({
+  id,
+  title,
+  description,
+  variant = "default",
+  onOpenChange,
+}) => {
+  const { dismiss } = useToast();
+
+  return (
+    <div
+      className={cn(
+        "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all",
+        variant === "default"
+          ? "border-border bg-background text-foreground"
+          : "border-destructive bg-destructive text-destructive-foreground"
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        {title && <div className="text-sm font-semibold">{title}</div>}
+        {description && <div className="text-sm opacity-90">{description}</div>}
+      </div>
+      <button
+        onClick={() => dismiss(id)}
+        className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none group-hover:opacity-100"
+      >
+        ✕
+      </button>
+    </div>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/alert.jsx`:
+
+```jsx
+import * as React from "react";
+import { cn } from "../../lib/utils";
+
+const Alert = React.forwardRef(
+  ({ className, variant = "default", ...props }, ref) => {
+    const variantClasses = {
+      default: "bg-blue-50 text-blue-800 border-blue-200",
+      destructive: "bg-red-50 text-red-800 border-red-200",
+      warning: "bg-yellow-50 text-yellow-800 border-yellow-200",
+    };
+
+    return (
+      <div
+        ref={ref}
+        role="alert"
+        className={cn(
+          "rounded-lg border p-4",
+          variantClasses[variant],
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+Alert.displayName = "Alert";
+
+const AlertTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <h5
+    ref={ref}
+    className={cn("mb-2 font-medium leading-none tracking-tight", className)}
+    {...props}
+  />
+));
+AlertTitle.displayName = "AlertTitle";
+
+const AlertDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm [&_p]:leading-relaxed", className)}
+    {...props}
+  />
+));
+AlertDescription.displayName = "AlertDescription";
+
+export { Alert, AlertTitle, AlertDescription };
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/label.jsx`:
+
+```jsx
+import React from "react";
+
+export const Label = ({ children, className, required, ...props }) => (
+  <label
+    className={cn("block text-sm font-medium text-gray-700", className)}
+    {...props}
+  >
+    {children}
+    {required && <span className="text-red-500 ml-1">*</span>}
+  </label>
+);
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/info.jsx`:
+
+```jsx
+import React from "react";
+import { Tooltip } from "./tooltip";
+
+export const Info = ({ description, className }) => {
+  return (
+    <Tooltip content={description}>
+      <div
+        className={cn(
+          "inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 cursor-help",
+          className
+        )}
+      >
+        <span className="text-xs font-bold">i</span>
+      </div>
+    </Tooltip>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/dropdown-menu.jsx`:
+
+```jsx
+import * as React from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Check, ChevronRight, Circle } from "lucide-react";
+
+import { cn } from "../../lib/utils";
+
+const DropdownMenu = DropdownMenuPrimitive.Root;
+
+const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+
+const DropdownMenuGroup = DropdownMenuPrimitive.Group;
+
+const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
+
+const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+
+const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+
+const DropdownMenuSubTrigger = React.forwardRef(
+  ({ className, inset, children, ...props }, ref) => (
+    <DropdownMenuPrimitive.SubTrigger
+      ref={ref}
+      className={cn(
+        "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent",
+        inset && "pl-8",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <ChevronRight className="ml-auto h-4 w-4" />
+    </DropdownMenuPrimitive.SubTrigger>
+  )
+);
+DropdownMenuSubTrigger.displayName =
+  DropdownMenuPrimitive.SubTrigger.displayName;
+
+const DropdownMenuSubContent = React.forwardRef(
+  ({ className, ...props }, ref) => (
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+DropdownMenuSubContent.displayName =
+  DropdownMenuPrimitive.SubContent.displayName;
+
+const DropdownMenuContent = React.forwardRef(
+  ({ className, sideOffset = 4, ...props }, ref) => (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.Content
+        ref={ref}
+        sideOffset={sideOffset}
+        className={cn(
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          className
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  )
+);
+DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
+
+const DropdownMenuItem = React.forwardRef(
+  ({ className, inset, ...props }, ref) => (
+    <DropdownMenuPrimitive.Item
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        inset && "pl-8",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
+
+const DropdownMenuCheckboxItem = React.forwardRef(
+  ({ className, children, checked, ...props }, ref) => (
+    <DropdownMenuPrimitive.CheckboxItem
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
+      )}
+      checked={checked}
+      {...props}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Check className="h-4 w-4" />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenuPrimitive.CheckboxItem>
+  )
+);
+DropdownMenuCheckboxItem.displayName =
+  DropdownMenuPrimitive.CheckboxItem.displayName;
+
+const DropdownMenuRadioItem = React.forwardRef(
+  ({ className, children, ...props }, ref) => (
+    <DropdownMenuPrimitive.RadioItem
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
+      )}
+      {...props}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Circle className="h-2 w-2 fill-current" />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenuPrimitive.RadioItem>
+  )
+);
+DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName;
+
+const DropdownMenuLabel = React.forwardRef(
+  ({ className, inset, ...props }, ref) => (
+    <DropdownMenuPrimitive.Label
+      ref={ref}
+      className={cn(
+        "px-2 py-1.5 text-sm font-semibold",
+        inset && "pl-8",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName;
+
+const DropdownMenuSeparator = React.forwardRef(
+  ({ className, ...props }, ref) => (
+    <DropdownMenuPrimitive.Separator
+      ref={ref}
+      className={cn("-mx-1 my-1 h-px bg-muted", className)}
+      {...props}
+    />
+  )
+);
+DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
+
+const DropdownMenuShortcut = ({ className, ...props }) => {
+  return (
+    <span
+      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      {...props}
+    />
+  );
+};
+DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
+
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/input.jsx`:
+
+```jsx
+import React from "react";
+
+export const Input = React.forwardRef(({ className, ...props }, ref) => (
+  <input
+    ref={ref}
+    className={cn(
+      "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+      className
+    )}
+    {...props}
+  />
+));
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/button.jsx`:
+
+```jsx
+import React from "react";
+import { cn } from "../../lib/utils";
+
+export const Button = React.forwardRef(
+  (
+    { className, variant = "default", size = "default", children, ...props },
+    ref
+  ) => {
+    const baseClasses =
+      "inline-flex items-center justify-center font-medium transition-colors";
+    const variantClasses = {
+      default: "bg-blue-600 text-white hover:bg-blue-700",
+      destructive: "bg-red-600 text-white hover:bg-red-700",
+      outline: "border border-gray-300 bg-white hover:bg-gray-50",
+      ghost: "hover:bg-gray-100",
+    };
+    const sizeClasses = {
+      default: "h-10 px-4 py-2 text-sm",
+      sm: "h-8 px-3 text-sm",
+      lg: "h-12 px-6 text-base",
+    };
+
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          baseClasses,
+          variantClasses[variant],
+          sizeClasses[size],
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/toast.jsx`:
+
+```jsx
+import React from "react";
+
+const ToastContext = React.createContext({});
+
+export const ToastProvider = ({ children }) => {
+  const [toasts, setToasts] = React.useState([]);
+
+  const addToast = (toast) => {
+    setToasts((prev) => [...prev, { id: Date.now(), ...toast }]);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  return (
+    <ToastContext.Provider value={{ addToast, removeToast }}>
+      {children}
+      <div className="fixed top-0 right-0 z-50 p-4 space-y-4">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            {...toast}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+};
+
+const Toast = ({ title, description, variant = "default", onClose }) => {
+  React.useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const baseClasses =
+    "rounded-lg p-4 shadow-lg flex items-center justify-between";
+  const variantClasses = {
+    default: "bg-white text-gray-800",
+    destructive: "bg-red-600 text-white",
+  };
+
+  return (
+    <div className={cn(baseClasses, variantClasses[variant])}>
+      <div>
+        {title && <div className="font-semibold">{title}</div>}
+        {description && <div className="text-sm mt-1">{description}</div>}
+      </div>
+      <button
+        onClick={onClose}
+        className="ml-4 text-gray-500 hover:text-gray-700"
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/dialog.jsx`:
+
+```jsx
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
+import { cn } from "../../lib/utils";
+
+// Dialog Root
+const Dialog = DialogPrimitive.Root;
+
+// Dialog Trigger
+const DialogTrigger = DialogPrimitive.Trigger;
+
+// Dialog Portal
+const DialogPortal = DialogPrimitive.Portal;
+
+// Dialog Close
+const DialogClose = DialogPrimitive.Close;
+
+// Dialog Overlay
+const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+  />
+));
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
+
+// Dialog Content
+const DialogContent = React.forwardRef(
+  ({ className, children, ...props }, ref) => (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  )
+);
+DialogContent.displayName = DialogPrimitive.Content.displayName;
+
+// Dialog Header
+const DialogHeader = ({ className, ...props }) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+);
+DialogHeader.displayName = "DialogHeader";
+
+// Dialog Footer
+const DialogFooter = ({ className, ...props }) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+);
+DialogFooter.displayName = "DialogFooter";
+
+// Dialog Title
+const DialogTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-lg font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+));
+DialogTitle.displayName = DialogPrimitive.Title.displayName;
+
+// Dialog Description
+const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+));
+DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
+// Dialog Cancel
+const DialogCancel = React.forwardRef(({ className, ...props }, ref) => (
+  <DialogClose
+    ref={ref}
+    className={cn(
+      "mt-2 inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      className
+    )}
+    {...props}
+  />
+));
+DialogCancel.displayName = "DialogCancel";
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogCancel,
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/collapsible.jsx`:
+
+```jsx
+import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
+
+const Collapsible = CollapsiblePrimitive.Root;
+
+const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger;
+
+const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent;
+
+export { Collapsible, CollapsibleTrigger, CollapsibleContent };
+
+```
+
+`/home/manan123/aptos-game/src/components/ui/card.jsx`:
+
+```jsx
+import React from "react";
+import { cn } from "../../lib/utils";
+
+export const Card = ({ className, children, ...props }) => (
+  <div
+    className={cn(
+      "rounded-lg border border-gray-200 bg-white shadow",
+      className
+    )}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+export const CardHeader = ({ className, children, ...props }) => (
+  <div className={cn("p-4 border-b border-gray-200", className)} {...props}>
+    {children}
+  </div>
+);
+
+export const CardContent = ({ className, children, ...props }) => (
+  <div className={cn("p-4", className)} {...props}>
+    {children}
+  </div>
+);
+
+```
+
+`/home/manan123/aptos-game/src/components/Character.jsx`:
+
+```jsx
+import { useAnimations, useGLTF } from "@react-three/drei";
+import { useEffect, useRef } from "react";
+
+const CHARACTERS = ["Anne", "Captain_Barbarossa", "Henry", "Mako"];
+
+export const Character = ({ character = 0, animation = "Idle", ...props }) => {
+  const { scene, animations } = useGLTF(
+    `/models/Characters_${CHARACTERS[character]}.gltf`
+  );
+
+  const ref = useRef();
+  const { actions } = useAnimations(animations, ref);
+
+  useEffect(() => {
+    actions[animation].reset().fadeIn(0.5).play();
+    return () => actions[animation]?.fadeOut(0.5);
+  }, [animation]);
+  return (
+    <group {...props} ref={ref}>
+      <primitive object={scene} />
+    </group>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/WalletProvider.jsx`:
+
+```jsx
+import { PropsWithChildren } from "react";
+import { AptosWalletAdapterProvider } from "@aptos-labs/wallet-adapter-react";
+
+import { APTOS_API_KEY, NETWORK } from "../constants";
+import { useToast } from "./ui/use-toast";
+
+export function WalletProvider({ children }) {
+  const { toast } = useToast();
+
+  return (
+    <AptosWalletAdapterProvider
+      autoConnect={true}
+      dappConfig={{ network: NETWORK, aptosApiKey: APTOS_API_KEY }}
+      optInWallets={[
+        "Continue with Google",
+        "Petra",
+        "Nightly",
+        "Pontem Wallet",
+        "Mizu Wallet",
+      ]}
+      onError={(error) => {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error || "Unknown wallet error",
+        });
+      }}
+    >
+      {children}
+    </AptosWalletAdapterProvider>
+  );
+}
+
+```
+
+`/home/manan123/aptos-game/src/components/Card.jsx`:
+
+```jsx
+import { Text, useFont, useGLTF, useTexture } from "@react-three/drei";
+import React from "react";
+
+const CARD_DESCRIPTIONS = {
+  punch: "Punch another pirate and make it drop a gem",
+  shield: "Protect yourself from an attack",
+  grab: "Grab a gem from the treasure. If no gem is left, you get nothing",
+};
+
+export function Card({ type = "shield", ...props }) {
+  const { nodes, materials } = useGLTF("/models/card.glb");
+  const texture = useTexture(`cards/${type}.jpg`);
+  return (
+    <group {...props} dispose={null}>
+      <mesh castShadow receiveShadow geometry={nodes.Plane.geometry}>
+        <meshStandardMaterial
+          {...materials.Front}
+          map={texture}
+          color="white"
+        />
+      </mesh>
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Plane_1.geometry}
+        material={materials.Borders}
+      />
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes.Plane_2.geometry}
+        material={materials.Back}
+      />
+      <Text
+        font="/fonts/RobotoSlab-Bold.ttf"
+        fontSize={0.1}
+        anchorY={"top"}
+        anchorX={"left"}
+        position-x={-0.46}
+        position-y={-0.3}
+        position-z={0.01}
+      >
+        {type.toUpperCase()}
+        <meshStandardMaterial
+          color="white"
+          roughness={materials.Front.roughness}
+        />
+      </Text>
+      <Text
+        font="/fonts/RobotoSlab-Regular.ttf"
+        fontSize={0.06}
+        maxWidth={0.9}
+        anchorY={"top"}
+        anchorX={"left"}
+        position-x={-0.46}
+        position-y={-0.44}
+        position-z={0.01}
+        lineHeight={1}
+      >
+        {CARD_DESCRIPTIONS[type] || ""}
+        <meshStandardMaterial
+          color="white"
+          roughness={materials.Front.roughness}
+        />
+      </Text>
+    </group>
+  );
+}
+
+useGLTF.preload("/models/card.glb");
+useTexture.preload("/cards/punch.jpg");
+useTexture.preload("/cards/shield.jpg");
+useTexture.preload("/cards/grab.jpg");
+useFont.preload("/fonts/RobotoSlab-Bold.ttf");
+useFont.preload("/fonts/RobotoSlab-Regular.ttf");
+
+```
+
+`/home/manan123/aptos-game/src/components/UI.jsx`:
+
+```jsx
+import { isHost, isStreamScreen, myPlayer } from "playroomkit";
+import { useEffect, useState } from "react";
+import { NB_ROUNDS, useGameEngine } from "../hooks/useGameEngine";
+import { useNavigate } from "react-router-dom";
+
+const audios = {
+  background: new Audio("/audios/Drunken Sailor - Cooper Cannell.mp3"),
+  punch: new Audio("/audios/punch.mp3"),
+  shield: new Audio("/audios/shield.mp3"),
+  grab: new Audio("/audios/grab.mp3"),
+  fail: new Audio("/audios/fail.mp3"),
+  cards: new Audio("/audios/cards.mp3"),
+};
+
+export const UI = () => {
+  const {
+    phase,
+    startGame,
+    timer,
+    playerTurn,
+    players,
+    round,
+    getCard,
+    actionSuccess,
+  } = useGameEngine();
+
+  const currentPlayer = players[playerTurn];
+  const me = myPlayer();
+  const currentCard = getCard();
+  const target =
+    phase === "playerAction" &&
+    currentCard === "punch" &&
+    players[currentPlayer.getState("playerTarget")];
+
+  let label = "";
+  switch (phase) {
+    case "cards":
+      label = "Select the card you want to play";
+      break;
+    case "playerChoice":
+      label =
+        currentPlayer.id === me.id
+          ? "Select the player you want to punch"
+          : `${currentPlayer?.state.profile?.name} is going to punch someone`;
+      break;
+    case "playerAction":
+      switch (currentCard) {
+        case "punch":
+          label = actionSuccess
+            ? `${currentPlayer?.state.profile?.name} is punching ${target?.state.profile?.name}`
+            : `${currentPlayer?.state.profile?.name} failed punching ${target?.state.profile?.name}`;
+          break;
+        case "grab":
+          label = actionSuccess
+            ? `${currentPlayer?.state.profile?.name} is grabbing a gem`
+            : `No more gems for ${currentPlayer?.state.profile?.name}`;
+          break;
+        case "shield":
+          label = `${currentPlayer?.state.profile?.name} can't be punched until next turn`;
+          break;
+        default:
+          break;
+      }
+      break;
+    case "end":
+      label = "Game Over";
+      break;
+    default:
+      break;
+  }
+
+  // AUDIO MANAGER
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const toggleAudio = () => {
+    setAudioEnabled((prev) => !prev);
+  };
+
+  let navigate = useNavigate();
+
+  useEffect(() => {
+    if (audioEnabled) {
+      audios.background.play();
+      audios.background.loop = true;
+    } else {
+      audios.background.pause();
+    }
+    return () => {
+      audios.background.pause();
+    };
+  }, [audioEnabled]);
+
+  useEffect(() => {
+    if (!audioEnabled) {
+      return;
+    }
+    let audioToPlay;
+    if (phase === "playerAction") {
+      if (actionSuccess) {
+        audioToPlay = audios[getCard()];
+      } else {
+        audioToPlay = audios.fail;
+      }
+    }
+    if (phase === "cards") {
+      audioToPlay = audios.cards;
+    }
+    if (audioToPlay) {
+      audioToPlay.currentTime = 0;
+      audioToPlay.play();
+    }
+  }, [phase, actionSuccess, audioEnabled]);
+  return (
+    <div className="text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pointer-events-none">
+      <div className="p-4 w-full flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-center uppercase">
+          Round {round}/{NB_ROUNDS}
+        </h2>
+
+        <div className=" flex items-center gap-1 w-14">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2.5}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+          <h2 className="text-2xl font-bold text-center uppercase">{timer}</h2>
+        </div>
+      </div>
+      <div className="flex-1" />
+      <div className="p-4 w-full">
+        <h1 className="text-2xl font-bold text-center">{label}</h1>
+
+        {phase === "end" && (
+          <p className="text-center">
+            Winner:{" "}
+            {players
+              .filter((player) => player.getState("winner"))
+              .map((player) => player.state.profile.name)
+              .join(", ")}
+            !
+          </p>
+        )}
+        {isHost() && phase === "end" && (
+          <>
+            <button
+              onClick={startGame}
+              className="mt-2 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto"
+            >
+              Play again
+            </button>
+
+            <button
+              onClick={() => navigate("/")}
+              className="mt-2 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto"
+            >
+              Exit
+            </button>
+          </>
+        )}
+      </div>
+      {isStreamScreen() && (
+        <button
+          className="fixed bottom-4 left-4 pointer-events-auto"
+          onClick={toggleAudio}
+        >
+          {audioEnabled ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+              />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+              />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/AttributeBox.jsx`:
+
+```jsx
+// AttributeBox.jsx - Custom component for attribute display
+const AttributeBox = ({ label, value }) => (
+  <div className="bg-gray-700 p-4 rounded-lg">
+    <Text className="text-gray-300 mb-1">{label}</Text>
+    <Text className="text-white text-lg">{value}</Text>
+  </div>
+);
+
+```
+
+`/home/manan123/aptos-game/src/components/WalletSelector.jsx`:
+
+```jsx
+import {
+  APTOS_CONNECT_ACCOUNT_URL,
+  AboutAptosConnect,
+  isAptosConnectWallet,
+  groupAndSortWallets,
+  isInstallRequired,
+  truncateAddress,
+  useWallet,
+  WalletItem,
+  AptosPrivacyPolicy,
+} from "@aptos-labs/wallet-adapter-react";
+import { useLocation } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  Copy,
+  LogOut,
+  User,
+} from "lucide-react";
+import { useCallback, useState } from "react";
+
+import { Button } from "./ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { useToast } from "./ui/use-toast";
+
+export function WalletSelector() {
+  const { account, connected, disconnect, wallet } = useWallet();
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const closeDialog = useCallback(() => setIsDialogOpen(false), []);
+
+  const copyAddress = useCallback(async () => {
+    if (!account?.address) return;
+    try {
+      await navigator.clipboard.writeText(account.address);
+      toast({
+        title: "Success",
+        description: "Copied wallet address to clipboard.",
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to copy wallet address.",
+      });
+    }
+  }, [account?.address, toast]);
+
+  return connected ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button>
+          {account?.ansName ||
+            (account?.address
+              ? truncateAddress(account.address.toString())
+              : "Unknown")}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={copyAddress} className="gap-2">
+          <Copy className="h-4 w-4" /> Copy address
+        </DropdownMenuItem>
+        {wallet && isAptosConnectWallet(wallet) && (
+          <DropdownMenuItem asChild>
+            <a
+              href={APTOS_CONNECT_ACCOUNT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex gap-2"
+            >
+              <User className="h-4 w-4" /> Account
+            </a>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={disconnect} className="gap-2">
+          <LogOut className="h-4 w-4" /> Disconnect
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <Button>Connect a Wallet</Button>
+      </DialogTrigger>
+      <ConnectWalletDialog close={closeDialog} />
+    </Dialog>
+  );
+}
+
+function ConnectWalletDialog({ close }) {
+  const { wallets = [] } = useWallet();
+  const location = useLocation();
+  const isPublicMintPage =
+    location.pathname !== "/create-collection" &&
+    location.pathname !== "/my-collections";
+  const { aptosConnectWallets, availableWallets, installableWallets } =
+    groupAndSortWallets(wallets);
+  const hasAptosConnectWallets = !!aptosConnectWallets.length;
+
+  return (
+    <DialogContent className="max-h-screen overflow-auto">
+      <AboutAptosConnect renderEducationScreen={renderEducationScreen}>
+        {isPublicMintPage ? (
+          <>
+            <DialogHeader className="flex flex-col items-center">
+              <DialogTitle className="flex flex-col text-center leading-snug">
+                <span>Log in or sign up</span>
+                <span>with Social + Aptos Connect</span>
+              </DialogTitle>
+            </DialogHeader>
+            {hasAptosConnectWallets && (
+              <div className="flex flex-col gap-2 pt-3">
+                {aptosConnectWallets.map((wallet) => (
+                  <AptosConnectWalletRow
+                    key={wallet.name}
+                    wallet={wallet}
+                    onConnect={close}
+                  />
+                ))}
+                <p className="flex gap-1 justify-center items-center text-muted-foreground text-sm">
+                  Learn more about{" "}
+                  <AboutAptosConnect.Trigger className="flex gap-1 py-3 items-center text-foreground">
+                    Aptos Connect <ArrowRight size={16} />
+                  </AboutAptosConnect.Trigger>
+                </p>
+                <AptosPrivacyPolicy className="flex flex-col items-center py-1">
+                  <p className="text-xs leading-5">
+                    <AptosPrivacyPolicy.Disclaimer />{" "}
+                    <AptosPrivacyPolicy.Link className="text-muted-foreground underline underline-offset-4" />
+                    <span className="text-muted-foreground">.</span>
+                  </p>
+                  <AptosPrivacyPolicy.PoweredBy className="flex gap-1.5 items-center text-xs leading-5 text-muted-foreground" />
+                </AptosPrivacyPolicy>
+                <div className="flex items-center gap-3 pt-4 text-muted-foreground">
+                  <div className="h-px w-full bg-secondary" />
+                  Or
+                  <div className="h-px w-full bg-secondary" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <DialogHeader className="flex flex-col items-center">
+            <DialogTitle className="flex flex-col text-center leading-snug">
+              <span>Connect a Wallet</span>
+            </DialogTitle>
+          </DialogHeader>
+        )}
+        <div className="flex flex-col gap-3 pt-3">
+          {availableWallets.map((wallet) => (
+            <WalletRow key={wallet.name} wallet={wallet} onConnect={close} />
+          ))}
+          {!!installableWallets.length && (
+            <Collapsible className="flex flex-col gap-3">
+              <CollapsibleTrigger asChild>
+                <Button size="sm" variant="ghost" className="gap-2">
+                  More wallets <ChevronDown />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="flex flex-col gap-3">
+                {installableWallets.map((wallet) => (
+                  <WalletRow
+                    key={wallet.name}
+                    wallet={wallet}
+                    onConnect={close}
+                  />
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+      </AboutAptosConnect>
+    </DialogContent>
+  );
+}
+
+function WalletRow({ wallet, onConnect }) {
+  return (
+    <WalletItem
+      wallet={wallet}
+      onConnect={onConnect}
+      className="flex items-center justify-between px-4 py-3 gap-4 border rounded-md"
+    >
+      <div className="flex items-center gap-4">
+        <WalletItem.Icon className="h-6 w-6" />
+        <WalletItem.Name className="text-base font-normal" />
+      </div>
+      {isInstallRequired(wallet) ? (
+        <Button size="sm" variant="ghost" asChild>
+          <WalletItem.InstallLink />
+        </Button>
+      ) : (
+        <WalletItem.ConnectButton asChild>
+          <Button size="sm">Connect</Button>
+        </WalletItem.ConnectButton>
+      )}
+    </WalletItem>
+  );
+}
+
+function AptosConnectWalletRow({ wallet, onConnect }) {
+  return (
+    <WalletItem wallet={wallet} onConnect={onConnect}>
+      <WalletItem.ConnectButton asChild>
+        <Button size="lg" variant="outline" className="w-full gap-4">
+          <WalletItem.Icon className="h-5 w-5" />
+          <WalletItem.Name className="text-base font-normal" />
+        </Button>
+      </WalletItem.ConnectButton>
+    </WalletItem>
+  );
+}
+
+function renderEducationScreen(screen) {
+  return (
+    <>
+      <DialogHeader className="grid grid-cols-[1fr_4fr_1fr] items-center space-y-0">
+        <Button variant="ghost" size="icon" onClick={screen.cancel}>
+          <ArrowLeft />
+        </Button>
+        <DialogTitle className="leading-snug text-base text-center">
+          About Aptos Connect
+        </DialogTitle>
+      </DialogHeader>
+
+      <div className="flex h-[162px] pb-3 items-end justify-center">
+        <screen.Graphic />
+      </div>
+      <div className="flex flex-col gap-2 text-center pb-4">
+        <screen.Title className="text-xl" />
+        <screen.Description className="text-sm text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a]:text-foreground" />
+      </div>
+
+      <div className="grid grid-cols-3 items-center">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={screen.back}
+          className="justify-self-start"
+        >
+          Back
+        </Button>
+        <div className="flex items-center gap-2 place-self-center">
+          {screen.screenIndicators.map((ScreenIndicator, i) => (
+            <ScreenIndicator key={i} className="py-4">
+              <div className="h-0.5 w-6 transition-colors bg-muted [[data-active]>&]:bg-foreground" />
+            </ScreenIndicator>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={screen.next}
+          className="gap-2 justify-self-end"
+        >
+          {screen.screenIndex === screen.totalScreens - 1 ? "Finish" : "Next"}
+          <ArrowRight size={16} />
+        </Button>
+      </div>
+    </>
+  );
+}
+
+```
+
+`/home/manan123/aptos-game/src/components/Experience.jsx`:
+
+```jsx
+import { Environment, OrbitControls } from "@react-three/drei";
+import { isStreamScreen } from "playroomkit";
+import { degToRad } from "three/src/math/MathUtils";
+import { Gameboard } from "./Gameboard";
+import { MobileController } from "./MobileController";
+
+export const Experience = () => {
+  return (
+    <>
+      {isStreamScreen() && <OrbitControls maxPolarAngle={degToRad(80)} />}
+      {isStreamScreen() ? <Gameboard /> : <MobileController />}
+      <Environment preset="dawn" background blur={2} />
+    </>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/Player.jsx`:
+
+```jsx
+import { Center, Gltf } from "@react-three/drei";
+import { motion } from "framer-motion-3d";
+import { useEffect, useState } from "react";
+import { degToRad } from "three/src/math/MathUtils";
+import { useGameEngine } from "../hooks/useGameEngine";
+import { Character } from "./Character";
+import { PlayerName } from "./PlayerName";
+
+export const Player = ({ index, player }) => {
+  const { phase, playerTurn, players, getCard } = useGameEngine();
+  const isPlayerTurn = phase === "playerAction" && index === playerTurn;
+  const currentPlayer = players[playerTurn];
+  const currentCard = getCard();
+  const hasShield = player.getState("shield");
+  const isPlayerPunched =
+    phase === "playerAction" &&
+    currentCard === "punch" &&
+    index === currentPlayer.getState("playerTarget");
+  const isWinner = player.getState("winner");
+  const [animation, setAnimation] = useState("Idle");
+
+  useEffect(() => {
+    let cardAnim = "Idle";
+    if (isPlayerTurn) {
+      switch (currentCard) {
+        case "punch":
+          cardAnim = "Sword";
+          break;
+        case "shield":
+          cardAnim = "Wave";
+          break;
+        case "grab":
+          cardAnim = "Punch";
+          break;
+        default:
+          break;
+      }
+    } else {
+      if (isPlayerPunched) {
+        cardAnim = "Duck";
+      }
+    }
+    if (isWinner) {
+      cardAnim = "Wave";
+    }
+    setAnimation(cardAnim);
+  }, [currentCard, playerTurn, phase, isPlayerPunched, isWinner]);
+
+  return (
+    <motion.group
+      animate={animation}
+      position-x={1 + index}
+      position-z={2}
+      variants={{
+        Sword: {
+          // punch
+          z: 0.2,
+          x: -1,
+        },
+        Wave: {
+          // shield
+          scale: 1.5,
+        },
+        Punch: {
+          // grab
+          x: 0,
+          z: 0.4,
+        },
+        Duck: {
+          // punched
+          z: -0.4,
+          x: -1,
+          rotateY: degToRad(180),
+        },
+      }}
+    >
+      <PlayerName name={player.state.profile.name} position-y={0.8} />
+      <Character
+        scale={0.5}
+        character={index}
+        rotation-y={degToRad(180)}
+        animation={animation}
+      />
+      {hasShield && <Gltf scale={0.5} src="/models/Prop_Barrel.gltf" />}
+      {/* PLAYER GEMS */}
+      <Center disableY disableZ>
+        {[...Array(player.getState("gems") || 0)].map((_, index) => (
+          <Gltf
+            key={index}
+            src="/models/UI_Gem_Blue.gltf"
+            position-x={index * 0.25}
+            position-y={0.25}
+            position-z={0.5}
+            scale={0.5}
+          />
+        ))}
+      </Center>
+    </motion.group>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/Buy.jsx`:
+
+```jsx
+import React, { useState } from "react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Button } from "./ui/button";
+import { APT, aptos } from "../utils/aptos";
+
+const Buy = ({ listing }) => {
+  const { account, signAndSubmitTransaction } = useWallet();
+  const [isLoading, setIsLoading] = useState(false);
+  console.log("Listing", listing);
+
+  const onSubmit = async () => {
+    if (!account) {
+      throw new Error("Wallet not connected");
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await signAndSubmitTransaction({
+        sender: account.address,
+        data: {
+          function: `${process.env.VITE_MODULE_ADDRESS}::launchpad::purchase`,
+          typeArguments: [APT],
+          functionArguments: [listing.listing_object_address],
+        },
+      });
+      await aptos
+        .waitForTransaction({
+          transactionHash: response.hash,
+        })
+        .then(() => {
+          alert("Bought");
+        });
+
+      console.log("Bought");
+    } catch (error) {
+      console.error("Transaction failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center space-y-4 p-4 bg-gray-800 rounded-lg shadow-lg">
+      <div className="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-md">
+        <span className="text-gray-300">Price:</span>
+        <span className="text-white font-bold">{listing.price} APT</span>
+      </div>
+
+      <Button
+        onClick={onSubmit}
+        disabled={isLoading || !account}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition-colors"
+      >
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span>Processing...</span>
+          </div>
+        ) : (
+          "Buy Now"
+        )}
+      </Button>
+
+      <a
+        href={`https://explorer.aptoslabs.com/account/${listing.seller_address}?network=testnet`}
+        rel="noopener noreferrer"
+        target="_blank"
+        className="text-sm text-gray-400 hover:text-gray-300 transition-colors underline-offset-2 hover:underline"
+      >
+        View seller on explorer
+      </a>
+
+      {!account && (
+        <p className="text-sm text-gray-400">
+          Connect your wallet to make a purchase
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default Buy;
+
+```
+
+`/home/manan123/aptos-game/src/components/Text.jsx`:
+
+```jsx
+// Text.jsx - Custom Text component to replace Chakra's Text
+import React from "react";
+import { cn } from "../../lib/utils";
+
+export const Text = React.forwardRef(
+  ({ className, children, ...props }, ref) => (
+    <p ref={ref} className={cn("text-base", className)} {...props}>
+      {children}
+    </p>
+  )
+);
+
+Text.displayName = "Text";
+
+```
+
+`/home/manan123/aptos-game/src/components/PlayerName.jsx`:
+
+```jsx
+import { Billboard, Text } from "@react-three/drei";
+
+export const PlayerName = ({ name = "", fontSize = 0.2, ...props }) => (
+  <Billboard {...props}>
+    <Text
+      anchorY={"bottom"}
+      fontSize={fontSize}
+      font="/fonts/RobotoSlab-Bold.ttf"
+    >
+      {name}
+    </Text>
+  </Billboard>
+);
+
+```
+
+`/home/manan123/aptos-game/src/components/MarketplaceView.jsx`:
+
+```jsx
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Network, NetworkToChainId } from "@aptos-labs/ts-sdk";
+import { Alert, AlertTitle } from "./ui/alert";
+import { useGetNftsByOwner } from "../hooks/useGetNftsByOwner";
+import { useGetAllListedNfts } from "../hooks/useGetAllListedNfts";
+import NftCard from "./NftCard";
+import Buy from "./Buy";
+import List from "./List";
+import { WalletSelector } from "./WalletSelector";
+
+const MarketplaceView = () => {
+  const [activeTab, setActiveTab] = useState("nft");
+  const navigate = useNavigate();
+  const { connected, network, account } = useWallet();
+
+  const [nftsInWallet, setNftsInWallet] = useState([]);
+
+  // Use the custom hooks properly at the component level
+  const nftsListed = useGetAllListedNfts();
+  const nftsByOwner = useGetNftsByOwner(account?.address);
+
+  // Update nftsInWallet when nftsByOwner changes
+  useEffect(() => {
+    if (account && nftsByOwner) {
+      setNftsInWallet(nftsByOwner);
+    }
+    console.log("listedNfts", nftsListed);
+  }, [account, nftsByOwner]);
+
+  const tokenSwaps = [
+    {
+      id: 1,
+      fromToken: "GAT",
+      toToken: "SST",
+      rate: "1:10",
+      liquidity: "10000 GAT",
+    },
+    {
+      id: 2,
+      fromToken: "GAT",
+      toToken: "REP",
+      rate: "1:5",
+      liquidity: "5000 GAT",
+    },
+  ];
+
+  if (!connected) {
+    return <WalletSelector />;
+  }
+
+  // Network check
+  // if (network?.chainId !== NetworkToChainId[Network.TESTNET].toString()) {
+  //   return (
+  //     <Alert>
+  //       <AlertTitle>Please Connect to Testnet</AlertTitle>
+  //     </Alert>
+  //   );
+  // }
+
+  return (
+    <div className="min-h-screen bg-[#1a2436] text-white">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            <span className="font-bold">Back to Ship</span>
+          </button>
+
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2 bg-amber-900/50 px-4 py-2 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-amber-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="font-bold">1000 GAT</span>
+            </div>
+            <div className="flex items-center gap-2 bg-blue-900/50 px-4 py-2 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-blue-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              <span className="font-bold">500 REP</span>
+            </div>
+            <div className="flex items-center gap-2 bg-blue-900/50 px-4 py-2 rounded-lg">
+              <WalletSelector />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="grid grid-cols-3 gap-1 bg-gray-800/50 p-1 rounded-lg mb-8">
+          {[
+            { mobile: "NFTs", full: "NFT Market" },
+            { mobile: "Swap", full: "Token Swap" },
+            { mobile: "Bundles", full: "Bundles" },
+          ].map((tab, index) => (
+            <button
+              key={index}
+              className={`py-2 px-2 sm:px-4 rounded-md transition-all ${
+                activeTab === ["nft", "tokens", "bundles"][index]
+                  ? "bg-amber-600 text-white shadow-lg"
+                  : "text-gray-300 hover:bg-gray-700/50"
+              }`}
+              onClick={() => setActiveTab(["nft", "tokens", "bundles"][index])}
+            >
+              <span className="block text-sm sm:hidden">{tab.mobile}</span>
+              <span className="hidden sm:block">{tab.full}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {activeTab === "nft" && (
+          <>
+            {/* Listed NFTs */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-6">Available Listings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {nftsListed && nftsListed?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {nftsListed.map((nft) => (
+                      <NftCard key={nft.address} nft={nft}>
+                        <Buy listing={nft} />
+                      </NftCard>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground">
+                    No Room listed
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Owned NFTs */}
+            <div>
+              <h2 className="text-2xl font-bold mb-6">My Cards</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {nftsInWallet && nftsInWallet.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {nftsInWallet.map((nft) => (
+                      <NftCard key={nft.address} nft={nft}>
+                        <List nftTokenObjectAddr={nft.address} />
+                      </NftCard>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-white text-muted-foreground">
+                    Nothing to display
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === "tokens" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {tokenSwaps.map((swap) => (
+              <div
+                key={swap.id}
+                className="bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700"
+              >
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-amber-400 mb-2">
+                    {swap.fromToken} → {swap.toToken}
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-gray-300">Exchange Rate: {swap.rate}</p>
+                    <p className="text-gray-300">
+                      Liquidity Pool: {swap.liquidity}
+                    </p>
+                  </div>
+                  <div className="mt-6">
+                    <button className="w-full bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-lg transition-colors">
+                      Swap Tokens
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "bundles" && (
+          <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-amber-400 mb-2">
+                Create Bundle
+              </h3>
+              <p className="text-gray-300">
+                Combine multiple treasures into a single bundle
+              </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                {[1, 2, 3, 4].map((slot) => (
+                  <div
+                    key={slot}
+                    className="border-2 border-dashed border-gray-600 rounded-lg h-32 flex items-center justify-center hover:border-amber-500 transition-colors cursor-pointer"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+
+              <button className="w-full mt-6 bg-amber-600 hover:bg-amber-500 text-white px-4 py-3 rounded-lg transition-colors">
+                Create Bundle
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MarketplaceView;
+
+```
+
+`/home/manan123/aptos-game/src/components/MobileController.jsx`:
+
+```jsx
+import { Center, ContactShadows, Gltf } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
+import { motion } from "framer-motion-3d";
+import { myPlayer, usePlayersList } from "playroomkit";
+import { degToRad } from "three/src/math/MathUtils";
+import { useGameEngine } from "../hooks/useGameEngine";
+import { Card } from "./Card";
+import { Character } from "./Character";
+import { PlayerName } from "./PlayerName";
+
+export const MobileController = () => {
+  const me = myPlayer();
+  const { players, phase, playerTurn } = useGameEngine();
+  const myIndex = players.findIndex((player) => player.id === me.id);
+  const cards = me.getState("cards") || [];
+  usePlayersList(true); // force rerender when player change
+  let playerIdx = 0;
+  const viewport = useThree((state) => state.viewport);
+  const scalingRatio = Math.min(1, viewport.width / 3);
+  return (
+    <group position-y={-1}>
+      <ContactShadows opacity={0.12} />
+      <group scale={scalingRatio}>
+        <group position-z={3.5} position-x={-0.6}>
+          <PlayerName
+            name={me.state.profile.name}
+            position-y={0.8}
+            fontSize={0.1}
+          />
+          <Character
+            character={myIndex}
+            rotation-y={degToRad(45)}
+            scale={0.4}
+          />
+          {[...Array(me.getState("gems") || 0)].map((_, index) => (
+            <Gltf
+              key={index}
+              src="/models/UI_Gem_Blue.gltf"
+              position-x={0.7 + index * 0.25}
+              position-y={0.25}
+              scale={0.5}
+            />
+          ))}
+        </group>
+        {/* CARDS */}
+        <group position-y={1}>
+          {cards.map((card, index) => {
+            let cardAnimState = "";
+            const selected = index === me.getState("selectedCard");
+            if (phase === "cards") {
+              cardAnimState = "cardSelection";
+              if (selected) {
+                cardAnimState = "cardSelectionSelected";
+              }
+            } else {
+              if (selected) {
+                cardAnimState = "selected";
+              }
+            }
+            return (
+              <motion.group
+                key={index}
+                position-x={index * 0.1}
+                position-y={2 - index * 0.1}
+                position-z={-index * 0.1}
+                animate={cardAnimState}
+                variants={{
+                  selected: {
+                    x: -0.1,
+                    y: 2.1,
+                    z: 0.1,
+                  },
+                  cardSelection: {
+                    x: index % 2 ? 0.6 : -0.6,
+                    y: Math.floor(index / 2) * 1.6,
+                    z: -0.5,
+                  },
+                  cardSelectionSelected: {
+                    x: 0,
+                    y: 0,
+                    z: 2,
+                    rotateX: degToRad(-45),
+                    rotateY: 0,
+                    rotateZ: 0,
+                    scale: 1.1,
+                  },
+                }}
+                onClick={() => {
+                  if (phase === "cards") {
+                    me.setState("selectedCard", index, true);
+                  }
+                }}
+              >
+                <Card type={card} />
+              </motion.group>
+            );
+          })}
+        </group>
+        {phase === "playerChoice" && players[playerTurn].id === me.id && (
+          <Center disableY disableZ>
+            {players.map(
+              (player, index) =>
+                player.id !== me.id && (
+                  <motion.group
+                    key={player.id}
+                    position-x={playerIdx++ * 0.8}
+                    position-z={-2}
+                    animate={
+                      index === me.getState("playerTarget") ? "selected" : ""
+                    }
+                    scale={0.4}
+                    variants={{
+                      selected: {
+                        z: 0,
+                        scale: 0.8,
+                      },
+                    }}
+                  >
+                    <mesh
+                      onClick={() => me.setState("playerTarget", index, true)}
+                      position-y={1}
+                      visible={false}
+                    >
+                      <boxGeometry args={[1.2, 2, 0.5]} />
+                      <meshStandardMaterial color="hotpink" />
+                    </mesh>
+                    <PlayerName
+                      name={player.state.profile.name}
+                      fontSize={0.3}
+                      position-y={1.6}
+                    />
+                    <Character
+                      character={index}
+                      animation={
+                        index === me.getState("playerTarget") ? "No" : "Idle"
+                      }
+                      name={player.state.profile.name}
+                    />
+                  </motion.group>
+                )
+            )}
+          </Center>
+        )}
+      </group>
+    </group>
+  );
+};
+
+```
+
+`/home/manan123/aptos-game/src/components/NftCard.jsx`:
+
+```jsx
+// NftCard.jsx - Main component
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader } from "./ui/card";
+
+const NftCard = ({ nft, children }) => {
+  const [metadata, setMetadata] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      console.log("Fetching metadata for NFT:", nft);
+      try {
+        if (!nft?.data?.uri) {
+          throw new Error("No URI provided");
+        }
+
+        if (typeof nft.data.uri === "object" && nft.data.uri.image) {
+          setMetadata(nft.data.uri);
+          return;
+        }
+
+        const response = await fetch(nft.data.uri);
+        const data = await response?.json();
+        setMetadata(data);
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching NFT metadata:", err);
+      }
+    };
+
+    fetchMetadata();
+  }, [nft]);
+
+  if (error) {
+    return null;
+  }
+
+  if (!metadata) {
+    return (
+      <Card className="animate-pulse p-4">
+        <div className="flex items-center space-x-4">
+          <div className="h-6 w-32 bg-gray-700 rounded"></div>
+        </div>
+      </Card>
+    );
+  }
+
+  // const attributes = {
+  //   Bed: metadata?.attributes[0]?.Bed,
+  //   Bathroom: metadata?.attributes[0]?.Bathroom,
+  //   Floor: metadata?.attributes[0]?.Floor,
+  //   Room: metadata?.attributes[0]?.Room,
+  // };
+
+  return (
+    <Card className="max-w-2xl mx-auto bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+      <CardHeader className="p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-white">
+              Hotel: {metadata?.name}
+            </h2>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 gap-6">
+          {/* Image Section */}
+          <div className="flex justify-center">
+            <img
+              src={metadata?.image}
+              alt={metadata?.name || "Hotel NFT"}
+              className="rounded-lg max-h-96 object-cover"
+            />
+          </div>
+
+          {/* Details Section */}
+          <div className="space-y-4">
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h1 className="text-gray-300 mb-2">Description</h1>
+              <h1 className="text-white">{metadata?.description}</h1>
+            </div>
+
+            {/* Attributes Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* <div className="bg-gray-700 p-4 rounded-lg">
+                <h1 className="text-gray-300 mb-1">Bed</h1>
+                <h1 className="text-white text-lg">
+                  {metadata?.attributes[0]?.Bed}
+                </h1>
+              </div>
+
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <h1 className="text-gray-300 mb-1">Bathroom</h1>
+                <h1 className="text-white text-lg">
+                  {metadata?.attributes[0]?.Bathroom}
+                </h1>
+              </div>
+
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <h1 className="text-gray-300 mb-1">Floor</h1>
+                <h1 className="text-white text-lg">
+                  {metadata?.attributes[0]?.Floor}
+                </h1>
+              </div>
+
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <h1 className="text-gray-300 mb-1">Room</h1>
+                <h1 className="text-white text-lg">
+                  {metadata?.attributes[0]?.Room}
+                </h1>
+              </div> */}
+            </div>
+          </div>
+
+          {/* Children (Additional Content) */}
+          {children && (
+            <div className="mt-6 flex justify-center">{children}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default NftCard;
+
+```
