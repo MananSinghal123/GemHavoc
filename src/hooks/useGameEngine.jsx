@@ -8,6 +8,8 @@ import {
 } from "playroomkit";
 import React, { useEffect, useRef } from "react";
 import { randInt } from "three/src/math/MathUtils";
+import { pickWinner } from "../entry-functions/pick_winner";
+import { useGetAssetData } from "./useGetAssetData";
 
 const GameEngineContext = React.createContext();
 
@@ -168,8 +170,43 @@ export const GameEngineProvider = ({ children }) => {
     return cards[selectedCard];
   };
 
+
+  // const pickWinnerFunc = async (e) => {
+  //     e.preventDefault();
+  //     setError(null);
+  
+  //     if (!account) {
+  //       return setError("Please connect your wallet");
+  //     }
+  
+  //     if (!asset) {
+  //       return setError("Asset not found");
+  //     }
+  
+  //     if (!data?.isMintActive) {
+  //       return setError("Minting is not available");
+  //     }
+  
+  //     const amount = parseFloat(assetCount);
+  //     if (Number.isNaN(amount) || amount <= 0) {
+  //       return setError("Invalid amount");
+  //     }
+  
+  //     const response = await signAndSubmitTransaction(
+  //       pickWinner({
+  //         assetType: asset.asset_type,
+  //       }),
+  //     );
+  //     await aptosClient().waitForTransaction({ transactionHash: response.hash });
+  //     queryClient.invalidateQueries();
+  //     setAssetCount("1");
+  //   };
+  
+
   const phaseEnd = () => {
     let newTime = 0;
+
+
     switch (getState("phase")) {
       case "cards":
         if (getCard() === "punch") {
@@ -209,6 +246,8 @@ export const GameEngineProvider = ({ children }) => {
               player.setState("cards", [], true);
             });
             setPhase("end", true);
+           
+            // pickWinner(  asset.asset_type,)
           } else {
             // NEXT ROUND
             console.log("Next round");

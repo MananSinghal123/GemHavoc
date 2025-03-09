@@ -9,16 +9,65 @@ import NftCard from "./NftCard";
 import Buy from "./Buy";
 import List from "./List";
 import { WalletSelector } from "./WalletSelector";
+import { CardContent,Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { useGetAssetData } from "../hooks/useGetAssetData";
+import { mintAsset } from "../entry-functions/mint_asset";
+import { aptosClient } from "../utils/aptosClient";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 const MarketplaceView = () => {
+  const { data } = useGetAssetData();
   const [activeTab, setActiveTab] = useState("nft");
   const navigate = useNavigate();
-  const { connected, network, account } = useWallet();
+  const { connected, network, account,signAndSubmitTransaction } = useWallet();
   const [nftsInWallet, setNftsInWallet] = useState([]);
   const nftsListed = useGetAllListedNfts();
   const nftsByOwner = useGetNftsByOwner(account?.address);
+  const [assetCount, setAssetCount] = useState("1");
+  const [error, setError] = useState(null);
+  const { asset, userMintBalance , yourBalance , maxSupply, currentSupply  } = data ?? {};
+  const queryClient = useQueryClient();
+
+
+  const mintFA = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!account) {
+      return setError("Please connect your wallet");
+    }
+
+    if (!asset) {
+      return setError("Asset not found");
+    }
+
+    if (!data?.isMintActive) {
+      return setError("Minting is not available");
+    }
+
+    const amount = parseFloat(assetCount);
+    if (Number.isNaN(amount) || amount <= 0) {
+      return setError("Invalid amount");
+    }
+
+    const response = await signAndSubmitTransaction(
+      mintAsset({
+        assetType: asset.asset_type,
+        amount,
+        decimals: asset.decimals,
+      }),
+    );
+    await aptosClient().waitForTransaction({ transactionHash: response.hash });
+    queryClient.invalidateQueries();
+    setAssetCount("1");
+  };
+
 
   useEffect(() => {
+    console.log(yourBalance)
     if (account && nftsByOwner) {
       setNftsInWallet(nftsByOwner);
     }
@@ -60,27 +109,17 @@ const MarketplaceView = () => {
             {/* Currency Display - Styled as treasure chests */}
             <div className="flex gap-4">
               <div className="flex items-center gap-2 bg-[#5c3c28] px-6 py-3 rounded-lg border-2 border-amber-600 shadow-inner">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                <img
+                  src={asset?.icon_uri }
                   className="h-6 w-6 text-amber-400"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+                  rounded="full"
+                  // viewBox="0 0 24 24"
+                  // fill="currentColor"
                 >
-                  <path d="M3 6c0-1.1.9-2 2-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm2 0v12h14V6H5zm2 2h10v2H7V8zm0 4h10v2H7v-2z" />
-                </svg>
-                <span className="font-bold text-amber-400">1000 GAT</span>
+                </img>
+                <span className="font-bold text-amber-400">{yourBalance} {asset?.symbol}</span>
               </div>
-              <div className="flex items-center gap-2 bg-[#5c3c28] px-6 py-3 rounded-lg border-2 border-blue-600 shadow-inner">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-blue-400"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
-                <span className="font-bold text-blue-400">500 REP</span>
-              </div>
+             
               <WalletSelector />
             </div>
           </div>
@@ -149,44 +188,96 @@ const MarketplaceView = () => {
           )}
 
           {activeTab === "tokens" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                {
-                  fromToken: "GAT",
-                  toToken: "SST",
-                  rate: "1:10",
-                  icon: "🪙",
-                },
-                {
-                  fromToken: "GAT",
-                  toToken: "REP",
-                  rate: "1:5",
-                  icon: "💎",
-                },
-              ].map((swap, index) => (
-                <div
-                  key={index}
-                  className="bg-[#5c3c28] rounded-lg overflow-hidden border-2 border-amber-600 shadow-lg"
-                >
-                  <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl">{swap.icon}</span>
-                      <h3 className="text-xl font-bold text-amber-400">
-                        {swap.fromToken} ⇄ {swap.toToken}
-                      </h3>
+            <>
+              <h2 className="text-3xl font-bold mb-6 text-amber-400 border-b-2 border-amber-600 pb-2">
+                💰 Mint New Treasures
+              </h2>
+              
+              <div className="bg-[#5c3c28] rounded-lg border-2 border-amber-600 p-6 mb-6">
+                {error && (
+                  <div className="mb-4 bg-red-900/50 border border-red-700 text-red-200 p-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
+                
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-1 bg-[#3d2b1f] p-4 rounded-lg border-2 border-[#2a1810] shadow-inner">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-amber-400"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                      </svg>
+                      <h3 className="text-lg font-bold text-amber-400">Mint Amount</h3>
                     </div>
-                    <div className="space-y-3 text-gray-300">
-                      <p>Exchange Rate: {swap.rate}</p>
-                      <div className="mt-6">
-                        <button className="w-full bg-amber-600 hover:bg-amber-500 text-white px-4 py-3 rounded-lg transition-colors">
-                          Make the Trade
-                        </button>
+                    
+                    <form onSubmit={mintFA} className="flex gap-3">
+                      <Input
+                        type="text"
+                        name="amount"
+                        value={assetCount}
+                        onChange={(e) => {
+                          setAssetCount(e.target.value);
+                        }}
+                        className="bg-[#2a1810] border-amber-700 text-amber-200 focus:ring-amber-500"
+                      />
+                      <Button
+                        type="submit"
+                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold border-2 border-amber-700 px-6"
+                      >
+                        Mint
+                      </Button>
+                    </form>
+                  </div>
+                  
+                  <div className="flex-1 flex flex-col justify-between bg-[#3d2b1f] p-4 rounded-lg border-2 border-[#2a1810] shadow-inner">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                      <img
+                  src={asset?.icon_uri }
+                  className="h-6 w-6 text-amber-400"
+                  rounded="full"
+                  // viewBox="0 0 24 24"
+                  // fill="currentColor"
+                >
+                </img>
+                        <h3 className="text-lg font-bold text-amber-400">Available to Mint</h3>
                       </div>
+                      <p className="text-amber-200 text-xl">
+                        {Math.min(userMintBalance, maxSupply - currentSupply)} {asset?.symbol}
+                      </p>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                      <img
+                  src={asset?.icon_uri }
+                  className="h-6 w-6 text-amber-400"
+                  rounded="full"
+                  // viewBox="0 0 24 24"
+                  // fill="currentColor"
+                >
+                </img>
+                        <h3 className="text-lg font-bold text-amber-400">Your Balance</h3>
+                      </div>
+                      <p className="text-amber-200 text-xl">
+                        {yourBalance} {asset?.symbol}
+                      </p>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-[#3d2b1f] p-4 rounded-lg border-2 border-[#2a1810] shadow-inner">
+                <span className="text-3xl">💡</span>
+                <p className="text-gray-300 italic">
+                  Mint new treasures to add to your collection, then trade them with other sailors or use them for upgrades!
+                </p>
+              </div>
+            </>
           )}
 
           {activeTab === "bundles" && (

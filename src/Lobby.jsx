@@ -17,9 +17,7 @@ function Lobby() {
 
   // Render the Game component only when the game is ready
   return isReady ? (
-    <GameEngineProvider>
       <Game />
-    </GameEngineProvider>
   ) : (
     <div>Loading...</div> // Show a loading state while waiting
   );
