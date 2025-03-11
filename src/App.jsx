@@ -1,16 +1,48 @@
-import { Routes, Route, BrowserRouter } from "react-router-dom";
-import Home from "./Home";
+import { Leva } from "leva";
+import { UILobby } from "./components/UILobby";
+import { UI } from "./components/UI";
+import { Canvas } from "@react-three/fiber";
+import { MotionConfig } from "framer-motion";
+import { Experience } from "./components/Experience";
+import { isStreamScreen, useMultiplayerState } from "playroomkit";
 import MarketplaceView from "./components/MarketplaceView";
-import Lobby from "./Lobby";
 
-export default function App() {
+
+const DEBUG = false;
+
+function App() {
+  const [gameScene]=useMultiplayerState("gameScene","lobby");
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/market" element={<MarketplaceView />} />
-        <Route path="/lobby" element={<Lobby />} />
-        <Route path="/" element={<Home />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+    {gameScene=="lobby" &&  <UILobby/>}
+    {gameScene=="game" &&  <UI/>}
+    {gameScene=="market" && <MarketplaceView/>}
+
+      <Leva hidden={!DEBUG || !isHost()} />
+      <Canvas
+        shadows
+        camera={{
+          position: [11, 14, -15],
+          fov: 25,
+        }}
+      >
+        <color attach="background" args={["#ececec"]} />
+        <MotionConfig
+          transition={{
+            type: "spring",
+            mass: 5,
+            stiffness: 500,
+            damping: 100,
+            restDelta: 0.0001,
+          }}
+        >
+          <Experience />
+        </MotionConfig>
+      </Canvas>
+      {/* <UI /> */}
+    </>
   );
 }
+
+export default App;

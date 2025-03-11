@@ -8,8 +8,6 @@ import {
 } from "playroomkit";
 import React, { useEffect, useRef } from "react";
 import { randInt } from "three/src/math/MathUtils";
-import { pickWinner } from "../entry-functions/pick_winner";
-import { useGetAssetData } from "./useGetAssetData";
 
 const GameEngineContext = React.createContext();
 
@@ -29,10 +27,13 @@ export const GameEngineProvider = ({ children }) => {
   const [playerStart, setPlayerStart] = useMultiplayerState("playerStart", 0);
   const [deck, setDeck] = useMultiplayerState("deck", []);
   const [gems, setGems] = useMultiplayerState("gems", NB_GEMS);
+  const [punchesReceived, setPuncherReceived] = useMultiplayerState("punches", 0);
   const [actionSuccess, setActionSuccess] = useMultiplayerState(
     "actionSuccess",
     true
   );
+  const [gameScene, setGameScene] = useMultiplayerState("gameScene", "lobby");
+
 
   const players = usePlayersList(true);
   players.sort((a, b) => a.id.localeCompare(b.id)); // we sort players by id to have a consistent order through all clients
@@ -95,9 +96,12 @@ export const GameEngineProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    startGame();
-    onPlayerJoin(startGame); // we restart the game when a new player joins
-  }, []);
+    if(gameScene=="game"){
+      console.log("Game Started")
+      startGame();
+      onPlayerJoin(startGame); // we restart the game when a new player joins
+    }
+  }, [gameScene]);
 
   const performPlayerAction = () => {
     const player = players[getState("playerTurn")];
@@ -110,6 +114,16 @@ export const GameEngineProvider = ({ children }) => {
       player.setState("shield", false, true);
     }
     switch (card) {
+      case "grab":
+        if (getState("gems") > 0) {
+          player.setState("gems", player.getState("gems") + 1, true);
+          setGems(getState("gems") - 1, true);
+          console.log("Grabbed gem");
+        } else {
+          console.log("No gems available");
+          success = false;
+        }
+        break;
       case "punch":
         let target = players[player.getState("playerTarget")];
         if (!target) {
@@ -127,18 +141,9 @@ export const GameEngineProvider = ({ children }) => {
           target.setState("gems", target.getState("gems") - 1, true);
           setGems(getState("gems") + 1, true);
           console.log("Target has gems");
+          target.setState("punchesReceived", target.getState("punchesReceived") + 1, true);     
         }
-        break;
-      case "grab":
-        if (getState("gems") > 0) {
-          player.setState("gems", player.getState("gems") + 1, true);
-          setGems(getState("gems") - 1, true);
-          console.log("Grabbed gem");
-        } else {
-          console.log("No gems available");
-          success = false;
-        }
-        break;
+        break;      
       case "shield":
         console.log("Shield");
         player.setState("shield", true, true);
@@ -170,43 +175,8 @@ export const GameEngineProvider = ({ children }) => {
     return cards[selectedCard];
   };
 
-
-  // const pickWinnerFunc = async (e) => {
-  //     e.preventDefault();
-  //     setError(null);
-  
-  //     if (!account) {
-  //       return setError("Please connect your wallet");
-  //     }
-  
-  //     if (!asset) {
-  //       return setError("Asset not found");
-  //     }
-  
-  //     if (!data?.isMintActive) {
-  //       return setError("Minting is not available");
-  //     }
-  
-  //     const amount = parseFloat(assetCount);
-  //     if (Number.isNaN(amount) || amount <= 0) {
-  //       return setError("Invalid amount");
-  //     }
-  
-  //     const response = await signAndSubmitTransaction(
-  //       pickWinner({
-  //         assetType: asset.asset_type,
-  //       }),
-  //     );
-  //     await aptosClient().waitForTransaction({ transactionHash: response.hash });
-  //     queryClient.invalidateQueries();
-  //     setAssetCount("1");
-  //   };
-  
-
   const phaseEnd = () => {
     let newTime = 0;
-
-
     switch (getState("phase")) {
       case "cards":
         if (getCard() === "punch") {
@@ -237,17 +207,61 @@ export const GameEngineProvider = ({ children }) => {
                 maxGems = player.getState("gems");
               }
             });
-            players.forEach((player) => {
-              player.setState(
-                "winner",
-                player.getState("gems") === maxGems,
-                true
+
+
+            const playersWithMaxGems = players.filter(player => 
+              player.getState("gems") === maxGems
+            );
+            
+            //Tie breaker
+            if (maxGems === 0||playersWithMaxGems.length>1) {
+              // No gems collected - find who got punched the least
+              console.log("No gems collected - using punch tiebreaker");
+              let minPunches = Number.MAX_SAFE_INTEGER;
+              
+              // First determine the minimum number of punches
+              players.forEach((player) => {
+                const punchesReceived = player.getState("punchesReceived") || 0;
+                if (punchesReceived < minPunches) {
+                  minPunches = punchesReceived;
+                }
+              });
+              
+              // Find all players with minimum punches
+              const tiedPlayers = players.filter(player => 
+                (player.getState("punchesReceived") || 0) === minPunches
               );
-              player.setState("cards", [], true);
-            });
+              
+
+               console.log("Tied players", tiedPlayers);
+
+              if (tiedPlayers.length === 1) {
+                // One clear winner
+                const winnerId = tiedPlayers[0].id;
+                players.forEach((player) => {
+                  player.setState("winner", player.id === winnerId, true);
+                });
+                console.log("Winner", winnerId);
+              } else {
+                // Still tied - select random winner from tied players
+                const randomWinnerIndex = Math.floor(Math.random() * tiedPlayers.length);
+                const randomWinnerId = tiedPlayers[randomWinnerIndex].id;
+                players.forEach((player) => {
+                  player.setState("winner", player.id === randomWinnerId, true);
+                });
+              }
+            }else{
+              players.forEach((player) => {
+                player.setState(
+                  "winner",
+                  player.getState("gems") === maxGems,
+                  true
+                );
+                player.setState("cards", [], true);
+              });
+            }
+
             setPhase("end", true);
-           
-            // pickWinner(  asset.asset_type,)
           } else {
             // NEXT ROUND
             console.log("Next round");

@@ -1,5 +1,5 @@
-import { Center, ContactShadows, Gltf } from "@react-three/drei";
-import { useThree } from "@react-three/fiber";
+import { Center, ContactShadows, Environment, Gltf, PerspectiveCamera,OrbitControls } from "@react-three/drei";
+import { useThree} from "@react-three/fiber";
 import { motion } from "framer-motion-3d";
 import { myPlayer, usePlayersList } from "playroomkit";
 import { degToRad } from "three/src/math/MathUtils";
@@ -7,18 +7,66 @@ import { useGameEngine } from "../hooks/useGameEngine";
 import { Card } from "./Card";
 import { Character } from "./Character";
 import { PlayerName } from "./PlayerName";
+import { useEffect } from "react";
+import * as THREE from "three";
 
 export const MobileController = () => {
   const me = myPlayer();
   const { players, phase, playerTurn } = useGameEngine();
-  const myIndex = players.findIndex((player) => player.id === me.id);
+  const myIndex = players?.findIndex((player) => player.id === me.id);
   const cards = me.getState("cards") || [];
   usePlayersList(true); // force rerender when player change
   let playerIdx = 0;
   const viewport = useThree((state) => state.viewport);
   const scalingRatio = Math.min(1, viewport.width / 3);
-  return (
+  const {camera} = useThree();
+  
+  useEffect(() => {
+    // Store the current camera position
+    const startPosition = camera.position.clone();
+    // Define the target position
+    const targetPosition = new THREE.Vector3(0, 4, 12);
+    
+    // Create a transition duration in milliseconds
+    const duration = 1000;
+    const startTime = Date.now();
+    
+    // Animation function
+    const animateCamera = () => {
+      const elapsedTime = Date.now() - startTime;
+      const progress = Math.min(elapsedTime / duration, 1);
+      
+      // Use an easing function for smoother transition (e.g., cubic easing)
+      const easedProgress = progress * progress * (3 - 2 * progress);
+      
+      // Interpolate between start and target positions
+      camera.position.x = startPosition.x + (targetPosition.x - startPosition.x) * easedProgress;
+      camera.position.y = startPosition.y + (targetPosition.y - startPosition.y) * easedProgress;
+      camera.position.z = startPosition.z + (targetPosition.z - startPosition.z) * easedProgress;
+      
+      // Continue the animation if not finished
+      if (progress < 1) {
+        requestAnimationFrame(animateCamera);
+      }
+    };
+    
+    // Start the animation
+    animateCamera();
+  }, [camera]);
+  
+
+  return (    
     <group position-y={-1}>
+      <OrbitControls
+      // Limit vertical rotation (in radians)
+  minPolarAngle={Math.PI/3}    // About 60 degrees from top
+  maxPolarAngle={Math.PI/2.2}  // About 82 degrees from top
+  
+  // Limit horizontal rotation (in radians)
+  minAzimuthAngle={-Math.PI/8} // About -22.5 degrees
+  maxAzimuthAngle={Math.PI/8}  // About 22.5 degrees
+      maxDistance={20} minDistance={10}/>
+       <Environment preset="dawn" background blur={2} />
       <ContactShadows opacity={0.12} />
       <group scale={scalingRatio}>
         <group position-z={3.5} position-x={-0.6}>
