@@ -71,7 +71,7 @@ export const MobileController = () => {
       <group scale={scalingRatio}>
         <group position-z={3.5} position-x={-0.6}>
           <PlayerName
-            name={me.state.profile.name}
+            name={me?.state?.profile?.name}
             position-y={0.8}
             fontSize={0.1}
           />

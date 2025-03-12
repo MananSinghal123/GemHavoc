@@ -10,11 +10,10 @@ export const useGetNftsByOwner = (ownerAddr) => {
       const nfts = [];
       for (const nft of res) {
         nfts.push({
-          name: nft.current_token_data?.current_collection?.collection_name,
+          ...nft,
           address: nft.token_data_id,
-          img: nft.current_token_data?.current_collection?.uri,
           data: {
-            uri: nft.current_token_data?.current_collection?.uri,
+            uri: nft.current_token_data?.token_uri,
           },
         });
       }

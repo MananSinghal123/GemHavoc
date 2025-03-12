@@ -6,6 +6,7 @@ const NftCard = ({ nft, children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log(nft)
     const fetchMetadata = async () => {
       try {
         if (!nft?.data?.uri) {

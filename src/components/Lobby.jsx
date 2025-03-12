@@ -74,7 +74,7 @@ import { usePlayersList } from "playroomkit";
         {players.map((player, index) => (
         <group key={player.id}  position-x={1 + index}
           position-z={2}  >
-             <PlayerName name={player.state.profile.name} position-y={0.8} />
+             <PlayerName name={player.state.profile?.name} position-y={0.8} />
                <Character
                  scale={0.5}
                  character={index}

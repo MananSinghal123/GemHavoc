@@ -9,7 +9,7 @@ import {
   WalletItem,
   AptosPrivacyPolicy,
 } from "@aptos-labs/wallet-adapter-react";
-import { useLocation } from "react-router-dom";
+// import { useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -108,10 +108,8 @@ export function WalletSelector() {
 
 function ConnectWalletDialog({ close }) {
   const { wallets = [] } = useWallet();
-  const location = useLocation();
-  const isPublicMintPage =
-    location.pathname !== "/create-collection" &&
-    location.pathname !== "/my-collections";
+  // const location = useLocation();
+  const isPublicMintPage =true
   const { aptosConnectWallets, availableWallets, installableWallets } =
     groupAndSortWallets(wallets);
   const hasAptosConnectWallets = !!aptosConnectWallets.length;

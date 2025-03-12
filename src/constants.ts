@@ -7,3 +7,4 @@ export const IS_PROD = Boolean(import.meta.env.PROD);
 export const APTOS_API_KEY = import.meta.env.VITE_APTOS_API_KEY;
 export const MODULE_ADDRESS_TOKEN=import.meta.env.VITE_MODULE_ADDRESS_TOKEN;
 export const FA_ADDRESS=import.meta.env.VITE_FA_ADDRESS;
+export const COLLECTION_ADDRESS=import.meta.env.VITE_COLLECTION_ADDRESS;

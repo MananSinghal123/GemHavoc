@@ -15,7 +15,7 @@ import {
     const [loadingSlide, setLoadingSlide] = useState(true);
   //   const [nameEditing, setNameEditing] = useAtom(NameEditingAtom);
     const [nameInput, setNameInput] = useState(
-      me?.getState("name") || me?.state.profile.name
+      me?.getState("name") || me?.state.profile?.name
     );  
   
     const [invited, setInvited] = useState(false);

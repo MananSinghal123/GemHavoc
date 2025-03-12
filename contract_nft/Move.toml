@@ -1,0 +1,27 @@
+[package]
+name = "aptos_game_nft"
+version = "1.0.0"
+authors = []
+
+# [addresses]
+# launchpad_addr = "_"
+# platform_creator_addr = "_"
+# minter="_"
+
+[addresses]
+launchpad_addr = "_"
+platform_creator_addr = "0x0214b532d9d6cbe60a57ab9b4bc0d7217ca6c90028ac808030171e35670c785f"
+minter="0x3c41ff6b5845e0094e19888cba63773591be9de59cafa9e582386f6af15dd490"
+
+[dev-addresses]
+launchpad_addr = "0x12"
+platform_creator_addr = "0x13"
+minter="0x14"
+
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "mainnet", subdir = "aptos-move/framework/aptos-framework" }
+AptosTokenObjects = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "mainnet", subdir = "aptos-move/framework/aptos-token-objects" }
+TokenMinter = { git = "https://github.com/aptos-labs/token-minter.git", rev = "main", subdir = "token-minter" }
+
+[dev-dependencies]

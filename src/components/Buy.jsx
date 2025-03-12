@@ -17,7 +17,7 @@ const Buy = ({ listing }) => {
       const response = await signAndSubmitTransaction({
         sender: account.address,
         data: {
-          function: `${process.env.VITE_MODULE_ADDRESS}::launchpad::purchase`,
+          function: `${import.meta.env.VITE_MODULE_ADDRESS}::launchpad::purchase`,
           typeArguments: [APT],
           functionArguments: [listing.listing_object_address],
         },

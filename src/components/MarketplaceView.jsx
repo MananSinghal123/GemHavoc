@@ -13,6 +13,7 @@ import { mintAsset } from "../entry-functions/mint_asset";
 import { aptosClient } from "../utils/aptosClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMultiplayerState } from "playroomkit";
+import { Mint } from "./Mint";
 
 const MarketplaceView = () => {
   const { data } = useGetAssetData();
@@ -113,7 +114,7 @@ const MarketplaceView = () => {
           <div className="flex -mb-px">
             {[
               { icon: "🎴", label: "Trade Cards" },
-              { icon: "💰", label: "Swap Treasures" },
+              { icon: "💰", label: "Get COINS" },
               { icon: "📦", label: "Bundle Loot" },
             ].map((tab, index) => (
               <button
@@ -187,7 +188,7 @@ const MarketplaceView = () => {
           {activeTab === "tokens" && (
             <>
               <h2 className="text-2xl font-bold mb-6 text-[#ffd700] flex items-center gap-2">
-                <span className="text-2xl">💰</span> Mint New Treasures
+                <span className="text-2xl">💰</span> Mint New COINS
               </h2>
               
               <div className="bg-gradient-to-br from-[#3d1d15] to-[#240d08] rounded-lg border border-[#8b4513] p-6 mb-6 shadow-lg">
@@ -221,7 +222,7 @@ const MarketplaceView = () => {
                         type="submit"
                         className="bg-[#8b4513] hover:bg-[#cd7f32] text-white font-bold border border-[#ffd700] py-5 text-lg"
                       >
-                        Mint Treasure
+                        Mint {asset.name}
                       </Button>
                     </form>
                   </div>
@@ -261,38 +262,16 @@ const MarketplaceView = () => {
               <div className="flex items-center gap-4 bg-[#3d1d15]/30 p-5 rounded-lg border border-[#5e2814]/50">
                 <span className="text-3xl">💡</span>
                 <p className="text-[#e6c78b]">
-                  Mint new treasures to add to your collection, then trade them with other sailors or use them for upgrades!
+                  Mint new coins to add to your collection, then bet them with other sailors or use them for future upgrades!
                 </p>
               </div>
             </>
           )}
 
           {activeTab === "bundles" && (
-            <div className="bg-gradient-to-br from-[#3d1d15] to-[#240d08] rounded-lg border border-[#8b4513] p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl">📦</span>
-                <h3 className="text-xl font-bold text-[#ffd700]">
-                  Bundle Your Treasures
-                </h3>
-              </div>
-              
-              <p className="text-[#e6c78b] mb-6">Combine items to create powerful new treasures with special abilities.</p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {[1, 2, 3, 4].map((slot) => (
-                  <div
-                    key={slot}
-                    className="border-2 border-dashed border-[#8b4513]/70 rounded-lg h-32 flex items-center justify-center hover:border-[#cd7f32] transition-colors cursor-pointer bg-black/30"
-                  >
-                    <span className="text-4xl opacity-70">➕</span>
-                  </div>
-                ))}
-              </div>
-              
-              <button className="w-full bg-[#8b4513] hover:bg-[#cd7f32] text-white px-4 py-4 rounded-lg transition-colors font-bold text-lg border border-[#ffd700]">
-                Forge Bundle
-              </button>
-            </div>
+            <>
+            <Mint/>
+            </>
           )}
         </div>
       </div>
