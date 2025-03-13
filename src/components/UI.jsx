@@ -38,7 +38,7 @@ export const UI = () => {
   const currentPlayer = players[playerTurn];
   const me = myPlayer();
   const currentCard = getCard();
- const { connected, network, account,signAndSubmitTransaction } = useWallet();
+ const { account,signAndSubmitTransaction } = useWallet();
  const queryClient = useQueryClient();
   const [gameScene,setGameScene]=useMultiplayerState("gameScene","lobby")
 
@@ -46,13 +46,13 @@ export const UI = () => {
     phase === "playerAction" &&
     currentCard === "punch" &&
     players[currentPlayer.getState("playerTarget")];
-  const { data } = useGetAssetData();
+     const { data } = useGetAssetData();
     const [error, setError] = useState(null)
-  const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
-  const [bet,setBet]=useState(0);
+    const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
+    const [bet,setBet]=useState(0);
 
 
-   const placeBetFunc = async (e) => {
+    const placeBetFunc = async (e) => {
       e.preventDefault();
       setError(null);
   
@@ -89,37 +89,41 @@ export const UI = () => {
       // setAssetCount("1");
     };
   
-
     const pickWinnerFunc = async () => {
       setError(null);
-  
-      if (!account) {
-        return setError("Please connect your wallet");
-      }
-  
+    
       if (!asset) {
         return setError("Asset not found");
-       }
-
-
-      // Auto sign and submit transaction
-      /*const transaction = await aptosClient().transaction.build.simple({
-          sender: account.address,
-          data: {
-            function: `${MODULE_ADDRESS_TOKEN}::launchpad::pickWinner`,
-            typeArguments: [],
-            functionArguments: [asset.asset_type, 0],
+      }
+    
+      try {
+        // Call your backend API
+        const response = await fetch('http://localhost:3000/api/pick-winner', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-      });
-
-      const committedTransaction = await aptosClient().signAndSubmitTransaction({ signer: account, transaction });
-
-      const executedTransaction = await aptosClient().waitForTransaction({ transactionHash: committedTransaction.hash });
-
-      console.log(executedTransaction);*/
-
+          body: JSON.stringify({
+            assetType: asset.asset_type
+          })
+        });
+    
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to pick winner');
+        }
+        
+        console.log('Transaction successful:', data);
+        
+        // Update your UI as needed
+        queryClient.invalidateQueries();
+        
+      } catch (error) {
+        console.error(error);
+        setError("Failed to pick winner: " + error.message);
+      }
     };
-  
 
   let label = "";
   switch (phase) {

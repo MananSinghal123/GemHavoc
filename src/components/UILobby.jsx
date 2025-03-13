@@ -6,6 +6,8 @@ import {
     usePlayersList,
   } from "playroomkit";
   import { useEffect, useState } from "react";
+import { ChatWindow } from "./ChatWindow";
+import { Button } from "./ui/button";
   
   // export const NameEditingAtom = atom(false);
   
@@ -51,6 +53,12 @@ import {
   
     return (
       <>
+        <ChatWindow
+         endpoint="http://localhost:3000/api/chat"
+         emoji="🤖"
+         titleText="Aptos agent"
+         placeholder="I'm your friendly Aptos agent! Ask me anything..."           
+       />
         <div
           className={`fixed z-30 top-0 left-0 right-0 h-screen bg-white flex items-center justify-center gap-1 text-5xl pointer-events-none transition-transform duration-500
         ${loadingSlide ? "" : "translate-y-[100%]"}
@@ -85,11 +93,11 @@ import {
             </div>
           ))} */}
         </div>
-        {gameScene === "lobby" && isHost() && (
-          <div className="fixed bottom-4 right-4 z-10 flex flex-col gap-2 items-end">
-            <button
-              className="px-4 py-2 bg-gray-100 text-black text-lg rounded-md"
-              onClick={() => {
+        
+          <div className="fixed bottom-4 left-4 z-10 flex flex-col gap-2 items-end">
+            <Button
+              className="w-full bg-amber-700 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-md transition-colors border-2 border-amber-900 shadow-lg relative z-10 group transform hover:scale-105"
+               onClick={() => {
                 setGameScene("market");
                 // setTimeout(() => {
                 //   setGameState("game");
@@ -97,9 +105,10 @@ import {
               }}
             >
               Treasury
-            </button>
-            <button
-              className="px-8 py-2 bg-gray-100 text-black text-2xl rounded-md"
+            </Button>
+            {gameScene === "lobby" && isHost() && (
+            <Button
+              className="w-full bg-amber-700 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-md transition-colors border-2 border-amber-900 shadow-lg relative z-10 group transform hover:scale-105"
               onClick={async () => {
                 setGameScene("loading");
               //   await startMatchmaking();
@@ -107,11 +116,12 @@ import {
               }}
             >
               Online
-            </button>
+            </Button>
+               )}
           </div>
-        )}
-        <button
-          className="z-20 fixed top-4 right-4 px-8 py-2 bg-gray-100 text-black text-2xl rounded-md flex items-center gap-2"
+     
+        <Button
+          className="z-20 fixed top-4 right-4 bg-amber-700 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-md transition-colors border-2 border-amber-900 shadow-lg flex items-center gap-2"
           onClick={invite}
           disabled={invited}
         >
@@ -152,7 +162,7 @@ import {
               Invite
             </>
           )}
-        </button>
+        </Button>
         {/* {nameEditing && (
           <div className="fixed z-20 inset-0 flex items-center justify-center flex-col gap-2 bg-black bg-opacity-20 backdrop-blur-sm">
             <input

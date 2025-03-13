@@ -27,7 +27,7 @@ export const GameEngineProvider = ({ children }) => {
   const [playerStart, setPlayerStart] = useMultiplayerState("playerStart", 0);
   const [deck, setDeck] = useMultiplayerState("deck", []);
   const [gems, setGems] = useMultiplayerState("gems", NB_GEMS);
-  const [punchesReceived, setPuncherReceived] = useMultiplayerState("punches", 0);
+  const [punchesReceived, setPunchesReceived] = useMultiplayerState("punches", 0);
   const [actionSuccess, setActionSuccess] = useMultiplayerState(
     "actionSuccess",
     true

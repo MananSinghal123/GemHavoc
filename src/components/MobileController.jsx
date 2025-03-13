@@ -173,7 +173,7 @@ export const MobileController = () => {
                       <meshStandardMaterial color="hotpink" />
                     </mesh>
                     <PlayerName
-                      name={player.state.profile.name}
+                      name={player?.state?.profile?.name}
                       fontSize={0.3}
                       position-y={1.6}
                     />

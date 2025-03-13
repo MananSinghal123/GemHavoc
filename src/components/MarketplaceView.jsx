@@ -14,6 +14,7 @@ import { aptosClient } from "../utils/aptosClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMultiplayerState } from "playroomkit";
 import { Mint } from "./Mint";
+import { ChatWindow } from "./ChatWindow";
 
 const MarketplaceView = () => {
   const { data } = useGetAssetData();
@@ -74,6 +75,13 @@ const MarketplaceView = () => {
   return (
     
  <div className="bg-[#1a0f0b] text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col overflow-y-auto">
+    <ChatWindow
+                        endpoint="http://localhost:3000/api/chat"
+                        emoji="🤖"
+                        titleText="Aptos agent"
+                        placeholder="I'm your friendly Aptos agent! Ask me anything..."
+                        
+                        />
       {/* Top Navigation Bar */}
       <div className="bg-gradient-to-r from-[#2d1610] to-[#3d1d15] border-b-2 border-[#8b4513] shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -190,6 +198,8 @@ const MarketplaceView = () => {
               <h2 className="text-2xl font-bold mb-6 text-[#ffd700] flex items-center gap-2">
                 <span className="text-2xl">💰</span> Mint New COINS
               </h2>
+
+            
               
               <div className="bg-gradient-to-br from-[#3d1d15] to-[#240d08] rounded-lg border border-[#8b4513] p-6 mb-6 shadow-lg">
                 {error && (
