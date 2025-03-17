@@ -1,13 +1,13 @@
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { ABI } from "./abi";
 
-export const APTOGOTCHI_CONTRACT_ADDRESS =
-  "0x497c93ccd5d3c3e24a8226d320ecc9c69697c0dad5e1f195553d7eaa1140e91f";
-export const COLLECTION_ID =
-  "0xfce62045f3ac19160c1e88662682ccb6ef1173eba82638b8bae172cc83d8e8b8";
-export const COLLECTION_CREATOR_ADDRESS =
-  "0x714319fa1946db285254e3c7c75a9aac05277200e59429dd1f80f25272910d9c";
-export const COLLECTION_NAME = "Aptogotchi Collection";
+// export const APTOGOTCHI_CONTRACT_ADDRESS =
+//   "0x497c93ccd5d3c3e24a8226d320ecc9c69697c0dad5e1f195553d7eaa1140e91f";
+// export const COLLECTION_ID =
+//   "0xfce62045f3ac19160c1e88662682ccb6ef1173eba82638b8bae172cc83d8e8b8";
+// export const COLLECTION_CREATOR_ADDRESS =
+//   "0x714319fa1946db285254e3c7c75a9aac05277200e59429dd1f80f25272910d9c";
+// export const COLLECTION_NAME = "Aptogotchi Collection";
 
 export const APT = "0x1::aptos_coin::AptosCoin";
 export const APT_UNIT = 100_000_000;
@@ -34,14 +34,14 @@ export const getAptBalance = async (addr) => {
   return result;
 };
 
-export const getCollection = async () => {
-  const collection = await aptos.getCollectionData({
-    collectionName: COLLECTION_NAME,
-    creatorAddress: COLLECTION_CREATOR_ADDRESS,
-  });
-  console.log("collection", collection);
-  return collection;
-};
+// export const getCollection = async () => {
+//   const collection = await aptos.getCollectionData({
+//     collectionName: COLLECTION_NAME,
+//     creatorAddress: COLLECTION_CREATOR_ADDRESS,
+//   });
+//   console.log("collection", collection);
+//   return collection;
+// };
 
 export const getUserOwnedNfts = async (ownerAddr) => {
   const result = await aptos.getAccountOwnedTokens({
