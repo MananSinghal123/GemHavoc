@@ -520,34 +520,44 @@ module launchpad_addr::launchpad {
     bet_store.totalamount = bet_store.totalamount + amount;
    }
 
-   public entry fun pickWinner(fa_obj: Object<Metadata>, winner_index: u64
+   public entry fun pickWinner(fa_obj: Object<Metadata>, winner_address:address,
     ) acquires Lotts , Config, FungibleStoreController,StakePool{
         let b_store = borrow_global_mut<Lotts>(@launchpad_addr);
         let total_players = vector::length(&b_store.players);
         let config = borrow_global<Config>(@launchpad_addr);
         let stake_pool = borrow_global<StakePool>(@initial_creator_addr);
 
-        //assert!(is_admin(config, addr), EONLY_ADMIN_CAN_UPDATE_CREATOR);
-        assert!(winner_index < total_players, 1); // Error code 1: Invalid winner index
+
+       let winner_exists = false;
+        
+        let i = 0;
+        while (i < total_players) {
+            let player = *vector::borrow(&b_store.players, i);
+            if (player == winner_address) {
+                winner_exists = true;
+                break;
+            };
+            i = i + 1;
+        };
+
+         assert!(winner_exists, 1); // Error code 1: Winner address not found in players list
+
 
         let amount:u64;
-        let _winner: address = @0x0; 
-        let better = *vector::borrow(&b_store.players, winner_index);
-        _winner = better;
         amount = b_store.totalamount;
 
           // Update the winner's win count
-        if (table::contains(&b_store.win_tracker, _winner)) {
-           let current_wins = *table::borrow(&b_store.win_tracker, _winner);
-           table::upsert(&mut b_store.win_tracker, _winner, current_wins + 1);
+        if (table::contains(&b_store.win_tracker,winner_address)) {
+           let current_wins = *table::borrow(&b_store.win_tracker, winner_address);
+           table::upsert(&mut b_store.win_tracker, winner_address, current_wins + 1);
         } else {
-           table::add(&mut b_store.win_tracker, _winner, 1);
+           table::add(&mut b_store.win_tracker, winner_address, 1);
         };
 
          fungible_asset::transfer(
             &generate_fungible_store_signer(),
             stake_pool.reward_store,
-            primary_fungible_store::ensure_primary_store_exists(_winner, fa_obj),
+            primary_fungible_store::ensure_primary_store_exists(winner_address, fa_obj),
             amount
         );
 

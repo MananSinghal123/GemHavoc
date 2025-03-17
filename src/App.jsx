@@ -4,20 +4,29 @@ import { UI } from "./components/UI";
 import { Canvas } from "@react-three/fiber";
 import { MotionConfig } from "framer-motion";
 import { Experience } from "./components/Experience";
-import { isStreamScreen, useMultiplayerState } from "playroomkit";
-import MarketplaceView from "./components/MarketplaceView";
-
+import { isHost, useMultiplayerState } from "playroomkit";
+import { createContext, useContext, useState } from "react";
+import { ChatWindow } from "./components/ChatWindow";
 
 const DEBUG = false;
 
-function App() {
-  const [gameScene]=useMultiplayerState("gameScene","lobby");
+// This was already being exported, so keep this as the single source of truth
+export const AppContext = createContext(null);
 
+function App() {
+  const [gameScene] = useMultiplayerState("gameScene", "lobby");
+  const [market, setMarket] = useState(false);
+  
   return (
-    <>
-    {gameScene=="lobby" &&  <UILobby/>}
-    {gameScene=="game" &&  <UI/>}
-    {gameScene=="market" && <MarketplaceView/>}
+    <AppContext.Provider value={{ market, setMarket }}>
+      {gameScene === "lobby"  && <UILobby />}
+      {gameScene === "game" && <UI />}
+      <ChatWindow
+         endpoint="http://localhost:3000/api/chat"
+         emoji="🤖"
+         titleText="Aptos agent"
+         placeholder="I'm your friendly Aptos agent! Ask me anything..."           
+       />
 
       <Leva hidden={!DEBUG || !isHost()} />
       <Canvas
@@ -40,8 +49,7 @@ function App() {
           <Experience />
         </MotionConfig>
       </Canvas>
-      {/* <UI /> */}
-    </>
+    </AppContext.Provider>
   );
 }
 
