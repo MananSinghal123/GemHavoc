@@ -182,7 +182,7 @@ export const MobileController = () => {
                       animation={
                         index === me.getState("playerTarget") ? "No" : "Idle"
                       }
-                      name={player.state.profile.name}
+                      name={player?.state?.profile?.name}
                     />
                   </motion.group>
                 )

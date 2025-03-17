@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useGetNftsByOwner } from "../hooks/useGetNftsByOwner";
 import { useGetAllListedNfts } from "../hooks/useGetAllListedNfts";
@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMultiplayerState } from "playroomkit";
 import { Mint } from "./Mint";
 import { ChatWindow } from "./ChatWindow";
+import { AppContext } from "../App";
 
 const MarketplaceView = () => {
   const { data } = useGetAssetData();
@@ -28,6 +29,20 @@ const MarketplaceView = () => {
   const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
   const queryClient = useQueryClient();
   const [gameScene, setGameScene] = useMultiplayerState("gameScene", "lobby");
+  const { market, setMarket } = useContext(AppContext);
+  const [animationState, setAnimationState] = useState("entering"); // States: "entering", "visible"
+  
+  useEffect(() => {
+    // Start animation sequence
+    setAnimationState("entering");
+    
+    // After animation completes, set to visible
+    const timer = setTimeout(() => {
+      setAnimationState("visible");
+    }, 50); // Match this with the CSS transition duration
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const mintFA = async (e) => {
     e.preventDefault();
@@ -62,31 +77,48 @@ const MarketplaceView = () => {
     setAssetCount("1");
   };
 
+  // Handle close animation
+  const handleClose = () => {
+    setAnimationState("exiting");
+    setTimeout(() => setMarket(false), 600); // Match this with the CSS transition duration
+  };
+
   useEffect(() => {
     if (account && nftsByOwner) {
       setNftsInWallet(nftsByOwner);
     }
   }, [account, nftsByOwner]);
 
+  // Define classes based on animation state
+  const containerClasses = `
+    bg-[#1a0f0b] text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 
+    flex flex-col overflow-y-auto transition-all duration-1000 ease-in-out
+    ${animationState === "entering" ? "scale-110 opacity-0" : ""}
+    ${animationState === "exiting" ? "scale-90 opacity-0" : ""}
+    ${animationState === "visible" ? "scale-100 opacity-100" : ""}
+  `;
+
   if (!connected) {
-    return <WalletSelector />;
+    return (
+      <div className={containerClasses}>
+        <WalletSelector/>
+      </div>
+    );
   }
 
   return (
-    
- <div className="bg-[#1a0f0b] text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col overflow-y-auto">
-    <ChatWindow
-                        endpoint="http://localhost:3000/api/chat"
-                        emoji="🤖"
-                        titleText="Aptos agent"
-                        placeholder="I'm your friendly Aptos agent! Ask me anything..."
-                        
-                        />
+    <div className={containerClasses}>
+    {/* <ChatWindow
+      endpoint="http://localhost:3000/api/chat"
+      emoji="🤖"
+      titleText="Aptos agent"
+      placeholder="I'm your friendly Aptos agent! Ask me anything..."                      
+     /> */}
       {/* Top Navigation Bar */}
       <div className="bg-gradient-to-r from-[#2d1610] to-[#3d1d15] border-b-2 border-[#8b4513] shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <button
-            onClick={() => setGameScene("lobby")}
+            onClick={()=>handleClose()}
             className="flex items-center gap-2 text-[#e6c78b] hover:text-[#ffd700] transition-colors"
           >
             <svg
@@ -103,7 +135,7 @@ const MarketplaceView = () => {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            <span className="font-bold text-lg">Return to Ship</span>
+            <span className="font-bold text-lg">Return to Island</span>
           </button>
 
           <div className="flex items-center gap-4">
@@ -232,7 +264,7 @@ const MarketplaceView = () => {
                         type="submit"
                         className="bg-[#8b4513] hover:bg-[#cd7f32] text-white font-bold border border-[#ffd700] py-5 text-lg"
                       >
-                        Mint {asset.name}
+                        Mint {asset?.name}
                       </Button>
                     </form>
                   </div>

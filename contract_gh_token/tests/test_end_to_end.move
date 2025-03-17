@@ -170,13 +170,13 @@ module launchpad_addr::test_end_to_end {
 
         let bet = account::create_account_for_test(sender_addr);
         let bet2 = account::create_account_for_test(sender2_addr);
-        
+
 
 
         launchpad::place_bet(&bet,owner,fa_2, 2);
         launchpad::place_bet(&bet2,owner,fa_2, 3);
        
-        launchpad::pickWinner(fa_2,1);
+        launchpad::pickWinner(fa_2,sender2_addr);
 
 
         let totalPlayers = launchpad::allPlayers(owner);

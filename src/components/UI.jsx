@@ -41,6 +41,7 @@ export const UI = () => {
  const { account,signAndSubmitTransaction } = useWallet();
  const queryClient = useQueryClient();
   const [gameScene,setGameScene]=useMultiplayerState("gameScene","lobby")
+  const [playerWallets, setPlayerWallets] = useMultiplayerState("playerWallets", {});
 
   const target =
     phase === "playerAction" &&
@@ -49,51 +50,72 @@ export const UI = () => {
      const { data } = useGetAssetData();
     const [error, setError] = useState(null)
     const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
-    const [bet,setBet]=useState(0);
+    // In UI.jsx
+    const [playerBets] = useMultiplayerState("playerBets", {});
 
 
-    const placeBetFunc = async (e) => {
-      e.preventDefault();
-      setError(null);
+    // const placeBetFunc = async (e) => {
+    //   e.preventDefault();
+    //   setError(null);
   
-      if (!account) {
-        return setError("Please connect your wallet");
-      }
+    //   if (!account) {
+    //     return setError("Please connect your wallet");
+    //   }
   
-      if (!asset) {
-        return setError("Asset not found");
-      }
+    //   if (!asset) {
+    //     return setError("Asset not found");
+    //   }
   
-      if (!data?.isMintActive) {
-        return setError("Minting is not available");
-      }
+    //   if (!data?.isMintActive) {
+    //     return setError("Minting is not available");
+    //   }
   
-      const amount = parseFloat(bet);
-      if (Number.isNaN(amount) || amount <= 0) {
-        return setError("Invalid amount");
-      }
+    //   const amount = parseFloat(bet);
+    //   if (Number.isNaN(amount) || amount <= 0) {
+    //     return setError("Invalid amount");
+    //   }
   
 
-      console.log(asset.asset_type,amount,asset.decimals)
+    //   console.log(asset.asset_type,amount,asset.decimals)
 
-      const response = await signAndSubmitTransaction(
-        placeBet({
-          assetType: asset.asset_type,
-          amount,
-          decimals: asset.decimals,
-        }),
-      );
-      console.log(response)
-      await aptosClient().waitForTransaction({ transactionHash: response.hash });
-      queryClient.invalidateQueries();
-      // setAssetCount("1");
-    };
+    //   const response = await signAndSubmitTransaction(
+    //     placeBet({
+    //       assetType: asset.asset_type,
+    //       amount,
+    //       decimals: asset.decimals,
+    //     }),
+    //   );
+    //   console.log(response)
+    //   await aptosClient().waitForTransaction({ transactionHash: response.hash });
+    //   queryClient.invalidateQueries();
+    //   const updatedBets = {...playerBets};
+    //   updatedBets[me.id] = {
+    //     amount: amount,
+    //     confirmed: true,
+    //     timestamp: Date.now()
+    //   };
+    //   setPlayerBets(updatedBets);
+    //   // setAssetCount("1");
+    // };
   
     const pickWinnerFunc = async () => {
       setError(null);
     
       if (!asset) {
         return setError("Asset not found");
+      }
+
+
+        // Find winner player ID
+      const winnerPlayer = players.find(player => player.getState("winner"));
+      if (!winnerPlayer) {
+        return setError("No winner found");
+      }
+
+      const winnerAddress = playerWallets[winnerPlayer.id];  
+      console.log("Winner Address",winnerAddress)
+      if (!winnerAddress) {
+        return setError("Winner's wallet address not found");
       }
     
       try {
@@ -104,7 +126,8 @@ export const UI = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            assetType: asset.asset_type
+            assetType: asset.asset_type,
+            winnerAddress:winnerAddress,
           })
         });
     
@@ -211,6 +234,20 @@ export const UI = () => {
    }
   },[phase])
 
+
+  // When the wallet connects, map the player ID to their wallet address
+   useEffect(() => {
+    if (account && me) {
+    const wallets = {...playerWallets};
+    wallets[me.id] = account.address.toStringLong();
+    setPlayerWallets(wallets);
+    
+    }
+  }, [account, me]);
+
+
+
+
   return (
     <div className="text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pointer-events-none">
       {/* Header Section */}
@@ -225,40 +262,19 @@ export const UI = () => {
         <div className="flex items-center gap-4">
           {/* Currency Display */}
           <div className="flex items-center gap-2">
-            {asset?.icon_uri && (
-              <img
-                src={asset.icon_uri}
-                className="h-6 w-6 text-amber-400 rounded-full"
-                alt={asset.symbol}
-              />
-            )}
-            <span className="font-bold text-amber-400">{yourBalance} {asset?.symbol}</span>
-          </div>
-  <form onSubmit={placeBetFunc} className="flex gap-3 ">
-                      <Input
-                        type="text"
-                        name="amount"
-                        value={bet}
-                        onChange={(e) => {
-                          setBet(e.target.value);
-                        }}
-                        className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto transition-colors"
-                        />
-                      <Button
-                        type="submit"
-                        className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto transition-colors"
-                        >
-                        PlaceBet
-                      </Button>
-                    </form>
-
-
-             
-
+  {asset?.icon_uri && (
+    <img
+      src={asset.icon_uri}
+      className="h-6 w-6 text-amber-400 rounded-full"
+      alt={asset.symbol}
+    />
+  )}
+  <span className="font-bold text-amber-400">
+    {yourBalance} {asset?.symbol} • Bet: {playerBets[me.id]?.amount || 0} {asset?.symbol}
+  </span>
+</div>
+         
           <WalletSelector />
-
-
-
 
         </div>
 
@@ -295,7 +311,7 @@ export const UI = () => {
             Winner:{" "}
             {players
               .filter((player) => player.getState("winner"))
-              .map((player) => player.state.profile.name)
+              .map((player) => player?.state?.profile?.name)
               .join(", ")}
             !
           </p>

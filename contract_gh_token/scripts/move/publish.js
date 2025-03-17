@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: '../.env' });
 const fs = require("node:fs");
 const cli = require("@aptos-labs/ts-sdk/dist/common/cli/index.js");
 const aptosSDK = require("@aptos-labs/ts-sdk")
@@ -59,7 +59,7 @@ async function publish() {
 
       // Regular expression to match the VITE_MODULE_ADDRESS variable
       const regex = /^VITE_MODULE_ADDRESS_TOKEN=.*$/m;
-      const newEntry = `VITE_MODULE_ADDRESSTOKEN=${response.objectAddress}`;
+      const newEntry = `VITE_MODULE_ADDRESS_TOKEN=${response.objectAddress}`;
 
       // Check if VITE_MODULE_ADDRESS is already defined
       if (envContent.match(regex)) {

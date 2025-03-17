@@ -330,6 +330,7 @@ export const GameEngineProvider = ({ children }) => {
         ...gameState,
         startGame,
         getCard,
+        punchesReceived,
       }}
     >
       {children}

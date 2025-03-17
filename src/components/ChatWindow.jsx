@@ -7,6 +7,7 @@ import { ChatMessageBubble } from "./ChatMessageBubble";
 import { IntermediateStep } from "./IntermediateStep";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useGetAllListedNfts } from "../hooks/useGetAllListedNfts";
+import { useGameEngine } from "../hooks/useGameEngine";
 
 export function ChatWindow(props) {
 	const messageContainerRef = useRef(null);
@@ -19,6 +20,7 @@ export function ChatWindow(props) {
 	const [messages, setMessages] = useState([]);
 	const [sourcesForMessages, setSourcesForMessages] = useState({});
     const nftsListed=useGetAllListedNfts();
+	const {account}=useWallet()
 	const intemediateStepsToggle = showIntermediateStepsToggle && (
 		<div className="flex items-center gap-2 text-[#e6c78b] px-2 py-1 rounded-md bg-[#240d08]/50 border border-[#5e2814]/50">
 			<input
@@ -33,7 +35,15 @@ export function ChatWindow(props) {
 		</div>
 	);
 
-const [metadataList, setMetadataList] = useState([]);
+    const [metadataList, setMetadataList] = useState([]);
+	const { 
+        round, 
+        phase, 
+        players, 
+        playerTurn,
+        punchesReceived, 
+        gems 
+    } = useGameEngine();
 
   useEffect(() => {
     console.log(metadataList)
@@ -98,6 +108,33 @@ const [metadataList, setMetadataList] = useState([]);
 		}
 	};
 
+
+	   // Get the current player's game data
+	   const getCurrentPlayerGameData = () => {
+        // If players array is empty or undefined, return empty data
+        if (!players || players.length === 0) {
+            return {
+                currentRound: round || 0,
+                playerPunches: punchesReceived || 0,
+                playerGems: 0,
+                totalGems: gems || 0,
+                gamePhase: phase || "unknown"
+            };
+        }
+
+        // Get current player (you might need to identify the current player differently)
+        const currentPlayer = players[playerTurn];
+        
+        return {
+            currentRound: round || 0,
+            playerPunches: currentPlayer ? (currentPlayer.getState("punchesReceived") || 0) : 0,
+            playerGems: currentPlayer ? (currentPlayer.getState("gems") || 0) : 0,
+            totalGems: gems || 0,
+            gamePhase: phase || "unknown"
+        };
+    };
+
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!input.trim()) return;
@@ -122,6 +159,9 @@ const [metadataList, setMetadataList] = useState([]);
 			await new Promise((resolve) => setTimeout(resolve, 300));
 		}
 
+		const gameData = getCurrentPlayerGameData();
+        const accountAddress=account.address.toStringLong();
+
 		if (!showIntermediateSteps) {
 			// Standard streaming mode
 			setChatEndpointIsLoading(true);
@@ -139,6 +179,8 @@ const [metadataList, setMetadataList] = useState([]);
 					body: JSON.stringify({
 						messages: updatedMessages,
                         metadataList:metadataList,
+						gameData: gameData,
+						accountAddress:accountAddress
 					}),
 				});
 
@@ -240,7 +282,7 @@ const [metadataList, setMetadataList] = useState([]);
 	};
 
 	return (
-		<div className="fixed bottom-4 right-4 z-50 ">
+		<div className="fixed bottom-4 right-4 z-50 text-xs">
 			{/* Chat toggle button */}
 			{!showChatWindow && (
 				<button 
