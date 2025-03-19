@@ -110,8 +110,8 @@ export const Lobby = () => {
     <group scale={scalingRatio}>
       <Environment preset="dawn" background blur={2} />
       <OrbitControls
-        minAzimuthAngle={Math.PI / 4}
-        maxAzimuthAngle={-Math.PI / 4}
+        minAzimuthAngle={Math.PI / 1.3}
+        maxAzimuthAngle={-Math.PI / 1.3}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.1}
         maxDistance={26}
@@ -122,7 +122,7 @@ export const Lobby = () => {
       <Gltf
         ref={gameboardRef}
         castShadow
-        src="/models/Gameboard.glb"
+        src="/models/Gameboard-2.glb"
         scale={0.8}
         position-x={-1}
         position-z={5}
@@ -158,4 +158,4 @@ export const Lobby = () => {
   );
 };
 
-useGLTF.preload("/models/Gameboard.glb");
+useGLTF.preload("/models/Gameboard-2.glb");

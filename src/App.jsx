@@ -1,5 +1,5 @@
 import { Leva } from "leva";
-import { UILobby } from "./components/UILobby";
+import { UILobby } from "./components/lobby-ui/UILobby";
 import { UI } from "./components/UI";
 import { Canvas } from "@react-three/fiber";
 import { MotionConfig } from "framer-motion";

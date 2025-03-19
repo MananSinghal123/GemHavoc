@@ -1,7 +1,7 @@
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { useEffect, useRef } from "react";
 
-const CHARACTERS = ["Anne", "Captain_Barbarossa", "Henry", "Mako"];
+const CHARACTERS = ["Skeleton", "Sharky", "Henry", "Mako"];
 
 export const Character = ({ character = 0, animation = "Idle", ...props }) => {
   const { scene, animations } = useGLTF(

@@ -1,18 +1,11 @@
-import { isHost, isStreamScreen, myPlayer, useMultiplayerState } from "playroomkit";
 import { useEffect, useState } from "react";
 import { NB_ROUNDS, useGameEngine } from "../hooks/useGameEngine";
 import { WalletSelector } from "./WalletSelector";
 import { useGetAssetData } from "../hooks/useGetAssetData";
-import { placeBet } from "../entry-functions/place_bet";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { aptosClient } from "../utils/aptosClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { pickWinner } from "../entry-functions/pick_winner";
-import UserWinDisplay, { getWinCount } from "../hooks/getWinCount";
-import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
-import { MODULE_ADDRESS_TOKEN } from "../constants";
+import UserWinDisplay from "../hooks/getWinCount";
+import { isHost, myPlayer, useMultiplayerState } from "playroomkit";
 
 const audios = {
   background: new Audio("/audios/Drunken Sailor - Cooper Cannell.mp3"),
@@ -38,149 +31,98 @@ export const UI = () => {
   const currentPlayer = players[playerTurn];
   const me = myPlayer();
   const currentCard = getCard();
- const { account,signAndSubmitTransaction } = useWallet();
- const queryClient = useQueryClient();
-  const [gameScene,setGameScene]=useMultiplayerState("gameScene","lobby")
+  const { account, signAndSubmitTransaction } = useWallet();
+  const queryClient = useQueryClient();
+  const [gameScene, setGameScene] = useMultiplayerState("gameScene", "lobby");
   const [playerWallets, setPlayerWallets] = useMultiplayerState("playerWallets", {});
 
   const target =
     phase === "playerAction" &&
     currentCard === "punch" &&
     players[currentPlayer.getState("playerTarget")];
-     const { data } = useGetAssetData();
-    const [error, setError] = useState(null)
-    const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
-    // In UI.jsx
-    const [playerBets] = useMultiplayerState("playerBets", {});
+  const { data } = useGetAssetData();
+  const [error, setError] = useState(null);
+  const { asset, userMintBalance, yourBalance, maxSupply, currentSupply } = data ?? {};
+  const [playerBets,setPlayerBets] = useMultiplayerState("playerBets", {});
 
-
-    // const placeBetFunc = async (e) => {
-    //   e.preventDefault();
-    //   setError(null);
-  
-    //   if (!account) {
-    //     return setError("Please connect your wallet");
-    //   }
-  
-    //   if (!asset) {
-    //     return setError("Asset not found");
-    //   }
-  
-    //   if (!data?.isMintActive) {
-    //     return setError("Minting is not available");
-    //   }
-  
-    //   const amount = parseFloat(bet);
-    //   if (Number.isNaN(amount) || amount <= 0) {
-    //     return setError("Invalid amount");
-    //   }
-  
-
-    //   console.log(asset.asset_type,amount,asset.decimals)
-
-    //   const response = await signAndSubmitTransaction(
-    //     placeBet({
-    //       assetType: asset.asset_type,
-    //       amount,
-    //       decimals: asset.decimals,
-    //     }),
-    //   );
-    //   console.log(response)
-    //   await aptosClient().waitForTransaction({ transactionHash: response.hash });
-    //   queryClient.invalidateQueries();
-    //   const updatedBets = {...playerBets};
-    //   updatedBets[me.id] = {
-    //     amount: amount,
-    //     confirmed: true,
-    //     timestamp: Date.now()
-    //   };
-    //   setPlayerBets(updatedBets);
-    //   // setAssetCount("1");
-    // };
-  
-    const pickWinnerFunc = async () => {
-      setError(null);
+  const pickWinnerFunc = async () => {
+    setError(null);
     
-      if (!asset) {
-        return setError("Asset not found");
-      }
+    if (!asset) {
+      return setError("Asset not found");
+    }
 
+    // Find winner player ID
+    const winnerPlayer = players.find(player => player.getState("winner"));
+    if (!winnerPlayer) {
+      return setError("No winner found");
+    }
 
-        // Find winner player ID
-      const winnerPlayer = players.find(player => player.getState("winner"));
-      if (!winnerPlayer) {
-        return setError("No winner found");
+    const winnerAddress = playerWallets[winnerPlayer.id];  
+    console.log("Winner Address", winnerAddress);
+    if (!winnerAddress) {
+      return setError("Winner's wallet address not found");
+    }
+  
+    try {
+      const response = await fetch('http://localhost:3000/api/pick-winner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assetType: asset.asset_type,
+          winnerAddress: winnerAddress,
+        })
+      });
+  
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to pick winner');
       }
-
-      const winnerAddress = playerWallets[winnerPlayer.id];  
-      console.log("Winner Address",winnerAddress)
-      if (!winnerAddress) {
-        return setError("Winner's wallet address not found");
-      }
-    
-      try {
-        // Call your backend API
-        const response = await fetch('http://localhost:3000/api/pick-winner', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            assetType: asset.asset_type,
-            winnerAddress:winnerAddress,
-          })
-        });
-    
-        const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error(data.message || 'Failed to pick winner');
-        }
-        
-        console.log('Transaction successful:', data);
-        
-        // Update your UI as needed
-        queryClient.invalidateQueries();
-        
-      } catch (error) {
-        console.error(error);
-        setError("Failed to pick winner: " + error.message);
-      }
-    };
+      
+      console.log('Transaction successful:', data);
+      queryClient.invalidateQueries();
+      
+    } catch (error) {
+      console.error(error);
+      setError("Failed to pick winner: " + error.message);
+    }
+  };
 
   let label = "";
   switch (phase) {
     case "cards":
-      label = "Select the card you want to play";
+      label = "Choose yer card, matey!";
       break;
     case "playerChoice":
       label =
         currentPlayer.id === me.id
-          ? "Select the player you want to punch"
-          : `${currentPlayer?.state.profile?.name} is going to punch someone`;
+          ? "Pick a scallywag to wallop!"
+          : `${currentPlayer?.state.profile?.name} be choosin' a target!`;
       break;
     case "playerAction":
       switch (currentCard) {
         case "punch":
           label = actionSuccess
-            ? `${currentPlayer?.state.profile?.name} is punching ${target?.state.profile?.name}`
-            : `${currentPlayer?.state.profile?.name} failed punching ${target?.state.profile?.name}`;
+            ? `${currentPlayer?.state.profile?.name} strikes ${target?.state.profile?.name}!`
+            : `${currentPlayer?.state.profile?.name} missed ${target?.state.profile?.name}!`;
           break;
         case "grab":
           label = actionSuccess
-            ? `${currentPlayer?.state.profile?.name} is grabbing a gem`
-            : `No more gems for ${currentPlayer?.state.profile?.name}`;
+            ? `${currentPlayer?.state.profile?.name} snatches some booty!`
+            : `No treasure for ${currentPlayer?.state.profile?.name}!`;
           break;
         case "shield":
-          label = `${currentPlayer?.state.profile?.name} can't be punched until next turn`;
+          label = `${currentPlayer?.state.profile?.name} raises a mighty shield!`;
           break;
         default:
           break;
       }
       break;
     case "end":
-      label = "Game Over";
-      
+      label = "Voyage Complete!";
       break;
     default:
       break;
@@ -191,8 +133,6 @@ export const UI = () => {
   const toggleAudio = () => {
     setAudioEnabled((prev) => !prev);
   };
-
-  // let navigate = useNavigate();
 
   useEffect(() => {
     if (audioEnabled) {
@@ -227,119 +167,112 @@ export const UI = () => {
     }
   }, [phase, actionSuccess, audioEnabled]);
 
-
-  useEffect(()=>{
-  if(phase=="end"){
-  pickWinnerFunc(  )
-   }
-  },[phase])
-
+  useEffect(() => {
+    if (phase === "end") {
+      pickWinnerFunc();
+    }
+  }, [phase]);
 
   // When the wallet connects, map the player ID to their wallet address
-   useEffect(() => {
+  useEffect(() => {
     if (account && me) {
-    const wallets = {...playerWallets};
-    wallets[me.id] = account.address.toStringLong();
-    setPlayerWallets(wallets);
-    
+      const wallets = {...playerWallets};
+      wallets[me.id] = account.address.toStringLong();
+      setPlayerWallets(wallets);
     }
   }, [account, me]);
 
-
-
-
   return (
-    <div className="text-white drop-shadow-xl fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pointer-events-none">
-      {/* Header Section */}
-      <div className="p-4 w-full flex items-center justify-between">
-        {/* Round Counter */}
-        <h2 className="text-2xl font-bold text-center uppercase">
-          Round {round}/{NB_ROUNDS}
-        </h2>
-        {account && <UserWinDisplay player_addr={account?.address.toStringLong()}/>}
-
-        {/* Asset Display */}
-        <div className="flex items-center gap-4">
-          {/* Currency Display */}
-          <div className="flex items-center gap-2">
-  {asset?.icon_uri && (
-    <img
-      src={asset.icon_uri}
-      className="h-6 w-6 text-amber-400 rounded-full"
-      alt={asset.symbol}
-    />
-  )}
-  <span className="font-bold text-amber-400">
-    {yourBalance} {asset?.symbol} • Bet: {playerBets[me.id]?.amount || 0} {asset?.symbol}
-  </span>
-</div>
-         
-          <WalletSelector />
-
+    <div className="fixed top-0 left-0 right-0 bottom-0 z-10 flex flex-col pointer-events-none">
+      {/* Compact Header */}
+      <div className="bg-black bg-opacity-50 border-b-2 border-amber-600 py-1 px-2 flex items-center justify-between">
+        {/* Round Counter with pirate ship icon */}
+        <div className="flex items-center gap-1">
+          <span className="text-amber-400 text-sm font-bold">
+            Voyage {round}/{NB_ROUNDS}
+          </span>
+          <span className="text-amber-400 text-sm ml-1">
+            ⏱️ {timer}
+          </span>
         </div>
 
-        {/* Timer */}
+        {/* Audio Toggle */}
+        <button 
+          onClick={toggleAudio} 
+          className="text-amber-400 hover:text-amber-200 pointer-events-auto"
+        >
+          {audioEnabled ? "🔊" : "🔇"}
+        </button>
+        
+        {/* Currency Display */}
         <div className="flex items-center gap-1">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.5}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          {asset?.icon_uri && (
+            <img
+              src={asset.icon_uri}
+              className="h-4 w-4 text-amber-400"
+              alt={asset?.symbol}
             />
-          </svg>
-          <h2 className="text-2xl font-bold text-center uppercase">{timer}</h2>
+          )}
+          <span className="text-amber-400 text-sm font-bold">
+            {yourBalance} {asset?.symbol} • Bet: {playerBets[me.id]?.amount || 0}
+          </span>
+          <div className="ml-1 scale-90">
+            <WalletSelector />
+          </div>
         </div>
       </div>
 
-      {/* Middle Spacer */}
-      <div className="flex-1" />
-      
-      {/* Footer Section */}
-      <div className="p-4 w-full">
-        {/* Game Status Message */}
-        <h1 className="text-2xl font-bold text-center mb-2">{label}</h1>
-        
-        {phase === "end" && (
-          <p className="text-center mb-4">
-            Winner:{" "}
-            {players
-              .filter((player) => player.getState("winner"))
-              .map((player) => player?.state?.profile?.name)
-              .join(", ")}
-            !
-          </p>
-        )}
-
-
-        {/* {phase === "end" && isHost() && pickWinnerFunc()} */}
-
-
-        {/* Game Control Buttons */}
-        {isHost() && phase === "end" && (
-          <div className="flex gap-4">
-            <button
-              onClick={startGame}
-              className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto transition-colors"
-            >
-              Play again
-            </button>
-
-            <button
-              onClick={() => setGameScene("lobby")}
-              className="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded pointer-events-auto transition-colors"
-            >
-              Exit
-            </button>
-          </div>
+      {/* Game Status Message - Floats at bottom */}
+      <div className="mt-auto">
+        <div className="bg-black bg-opacity-70 border-t-2 border-amber-600 p-2 text-center relative">
+          {/* Pirate-themed decorative corners */}
+          <div className="absolute top-0 left-0 text-amber-600 text-xs">☠</div>
+          <div className="absolute top-0 right-0 text-amber-600 text-xs">☠</div>
           
-        )}
+          {/* Game message */}
+          <h1 className="text-amber-400 text-sm font-bold">{label}</h1>
+          
+          {/* Winner display */}
+          {phase === "end" && (
+            <p className="text-amber-200 text-xs mt-1">
+              Winner: {" "}
+              {players
+                .filter((player) => player.getState("winner"))
+                .map((player) => player?.state?.profile?.name)
+                .join(", ")}
+              !
+            </p>
+          )}
+          
+          {/* Game Control Buttons */}
+          {isHost() && phase === "end" && (
+            <div className="flex gap-2 mt-1 justify-center">
+              {/* <button
+                onClick={startGame}
+                className="bg-amber-700 hover:bg-amber-600 text-amber-200 text-xs font-bold py-1 px-2 rounded pointer-events-auto transition-colors border border-amber-500"
+              >
+                Set Sail Again
+              </button> */}
+
+              <button
+                onClick={() =>{
+                   setGameScene("lobby");
+                   setPlayerBets({})
+                }}
+                className="bg-amber-700 hover:bg-amber-600 text-amber-200 text-xs font-bold py-1 px-2 rounded pointer-events-auto transition-colors border border-amber-500"
+              >
+                Return to Port
+              </button>
+            </div>
+          )}
+          
+          {/* Player stats */}
+          {account && (
+            <div className="absolute left-2 bottom-10 scale-75 origin-bottom-right">
+              <UserWinDisplay player_addr={account?.address.toStringLong()}/>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ const UserWinDisplay = ({ player_addr }) => {
   }
   
   return (
-    <div className="mint-balance-container">
+    <div className="mint-balance-container text-amber-400 text-sm font-bold">
       <h3>Your Wins</h3>
       <p className="balance-amount">{win}</p>
     </div>
