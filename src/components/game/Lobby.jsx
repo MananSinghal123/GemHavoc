@@ -15,8 +15,8 @@ import { degToRad } from "three/src/math/MathUtils";
 import { PlayerName } from "./PlayerName";
 import { Character } from "./Character";
 import { usePlayersList } from "playroomkit";
-import { AppContext } from "../App";
-import MarketplaceView from "./MarketplaceView";
+import { AppContext } from "../../App";
+import MarketplaceView from "../market/MarketplaceView";
 
 // Create a tooltip component similar to PlayerName
 const ObjectTooltip = ({ text, ...props }) => {
@@ -90,6 +90,7 @@ export const Lobby = () => {
 
   // Handle hover effects
   const handlePointerOver = (event) => {
+    console.log(event.object.name);
     if (event.object.name === "Prop_Chest_Gold") {
       document.body.style.cursor = "pointer";
       event.object.scale.set(0.2, 0.2, 0.2);

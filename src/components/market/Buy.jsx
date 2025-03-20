@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { Button } from "./ui/button";
-import { APT, aptos } from "../utils/aptos";
+import { Button } from "../ui/button";
+import { APT, aptos } from "../../utils/aptos";
 
 const Buy = ({ listing }) => {
   const { account, signAndSubmitTransaction } = useWallet();

@@ -16,7 +16,7 @@ import { useGameEngine } from "../../hooks/useGameEngine";
 import { AppContext } from "../../App";
 import { Button } from "../ui/button";
 import { WalletSelector } from "../WalletSelector";
-import MarketplaceView from "../MarketplaceView";
+import MarketplaceView from "../market/MarketplaceView";
 import {  useAllPlayersPlacedBets } from "../../utils/frontend/allPlayersPlacedBets";
   
   export const UILobby = () => {
@@ -63,17 +63,11 @@ import {  useAllPlayersPlacedBets } from "../../utils/frontend/allPlayersPlacedB
         <LoadingScreen loadingSlide={loadingSlide} />
   
         <div className="fixed bottom-4 left-4 z-10 flex flex-col gap-2 items-end">
-          {!showBetModal && (
-            <Button
-              className="w-full font-semibold py-3 px-6 rounded-md transition-colors bg-amber-700 hover:bg-amber-600 text-white"
-              onClick={() => setShowBetModal(true)}
-            >
-              Bet Now
-            </Button>
-          )}
+          
           {gameScene === "lobby" && isHost() && (
             <Button
-              className={`w-full font-semibold py-3 px-6 rounded-md transition-colors ${
+              size="md"
+              className={` ${
                 isHost() && allPlayersPlacedBets
                   ? "bg-amber-700 hover:bg-amber-600 text-white"
                   : "bg-gray-500 text-gray-300 cursor-not-allowed"
@@ -92,6 +86,11 @@ import {  useAllPlayersPlacedBets } from "../../utils/frontend/allPlayersPlacedB
                 (allPlayersPlacedBets ? "Start Game" : "Waiting for all bets...") 
                 : "Waiting for host to start"}
             </Button>
+          )}
+          {!showBetModal && (
+         <Button onClick={()=>setShowBetModal(true)} variant="primary" size="md">
+             Bet Now
+         </Button>
           )}
           <WalletSelector />
         </div>

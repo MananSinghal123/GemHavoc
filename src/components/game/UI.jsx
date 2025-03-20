@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { NB_ROUNDS, useGameEngine } from "../hooks/useGameEngine";
-import { WalletSelector } from "./WalletSelector";
-import { useGetAssetData } from "../hooks/useGetAssetData";
+import { NB_ROUNDS, useGameEngine } from "../../hooks/useGameEngine";
+import { WalletSelector } from "../WalletSelector";
+import { useGetAssetData } from "../../hooks/useGetAssetData";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
-import UserWinDisplay from "../hooks/getWinCount";
+import UserWinDisplay from "../../hooks/getWinCount";
 import { isHost, myPlayer, useMultiplayerState } from "playroomkit";
 
 const audios = {

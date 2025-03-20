@@ -3,7 +3,7 @@ import { useThree} from "@react-three/fiber";
 import { motion } from "framer-motion-3d";
 import { myPlayer, usePlayersList } from "playroomkit";
 import { degToRad } from "three/src/math/MathUtils";
-import { useGameEngine } from "../hooks/useGameEngine";
+import { useGameEngine } from "../../hooks/useGameEngine";
 import { Card } from "./Card";
 import { Character } from "./Character";
 import { PlayerName } from "./PlayerName";

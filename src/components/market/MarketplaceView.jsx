@@ -1,21 +1,20 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { useGetNftsByOwner } from "../hooks/useGetNftsByOwner";
-import { useGetAllListedNfts } from "../hooks/useGetAllListedNfts";
+import { useGetNftsByOwner } from "../../hooks/useGetNftsByOwner";
+import { useGetAllListedNfts } from "../../hooks/useGetAllListedNfts";
 import NftCard from "./NftCard";
 import Buy from "./Buy";
 import List from "./List";
-import { WalletSelector } from "./WalletSelector";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
-import { useGetAssetData } from "../hooks/useGetAssetData";
-import { mintAsset } from "../entry-functions/mint_asset";
-import { aptosClient } from "../utils/aptosClient";
+import { WalletSelector } from "../WalletSelector";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { useGetAssetData } from "../../hooks/useGetAssetData";
+import { mintAsset } from "../../entry-functions/mint_asset";
+import { aptosClient } from "../../utils/aptosClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMultiplayerState } from "playroomkit";
 import { Mint } from "./Mint";
-import { ChatWindow } from "./ChatWindow";
-import { AppContext } from "../App";
+import { AppContext } from "../../App";
 
 const MarketplaceView = () => {
   const { data } = useGetAssetData();

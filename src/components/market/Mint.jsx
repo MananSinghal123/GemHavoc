@@ -1,14 +1,13 @@
 import { truncateAddress, useWallet } from "@aptos-labs/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetCollectionData } from "../hooks/useGetCollectionData";
+import { useGetCollectionData } from "../../hooks/useGetCollectionData";
 import { useState } from "react";
-import { Card, CardContent } from "./ui/card";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
-import { clampNumber } from "../utils/clampNumber";
-import { NETWORK } from "../constants";
-import { formatDate } from "../utils/formatDate";
-import { mintNFT } from "../entry-functions/mint_nft";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { clampNumber } from "../../utils/clampNumber";
+import { NETWORK } from "../../constants";
+import { formatDate } from "../../utils/formatDate";
+import { mintNFT } from "../../entry-functions/mint_nft";
 
 export const Mint = () => {
   const { data } = useGetCollectionData();

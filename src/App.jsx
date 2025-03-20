@@ -1,12 +1,12 @@
 import { Leva } from "leva";
 import { UILobby } from "./components/lobby-ui/UILobby";
-import { UI } from "./components/UI";
+import { UI } from "./components/game/UI";
 import { Canvas } from "@react-three/fiber";
 import { MotionConfig } from "framer-motion";
-import { Experience } from "./components/Experience";
+import { Experience } from "./components/game/Experience";
 import { isHost, useMultiplayerState } from "playroomkit";
 import { createContext, useContext, useState } from "react";
-import { ChatWindow } from "./components/ChatWindow";
+import { ChatWindow } from "./components/chat-bot/ChatWindow";
 
 const DEBUG = false;
 

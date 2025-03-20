@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { APT, APT_UNIT, aptos } from "../utils/aptos";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { APT, APT_UNIT, aptos } from "../../utils/aptos";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
   Dialog,
   DialogCancel,
@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
+} from "../ui/dialog";
+import { Button } from "../ui/button";
 
 const List = ({ nftTokenObjectAddr }) => {
   const { account, signAndSubmitTransaction } = useWallet();

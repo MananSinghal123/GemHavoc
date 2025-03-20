@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import markdownToHtml from "../utils/markdownToHtml"
+import markdownToHtml from "../../utils/markdownToHtml"
 
 export function ChatMessageBubble(props) {
 	// Pirate theme colors and styles

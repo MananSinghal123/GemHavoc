@@ -2,7 +2,7 @@ import { Center, Gltf } from "@react-three/drei";
 import { motion } from "framer-motion-3d";
 import { useEffect, useState } from "react";
 import { degToRad } from "three/src/math/MathUtils";
-import { useGameEngine } from "../hooks/useGameEngine";
+import { useGameEngine } from "../../hooks/useGameEngine";
 import { Character } from "./Character";
 import { PlayerName } from "./PlayerName";
 

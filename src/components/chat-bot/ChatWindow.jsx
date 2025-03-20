@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { IntermediateStep } from "./IntermediateStep";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { useGetAllListedNfts } from "../hooks/useGetAllListedNfts";
-import { useGameEngine } from "../hooks/useGameEngine";
+import { useGetAllListedNfts } from "../../hooks/useGetAllListedNfts";
+import { useGameEngine } from "../../hooks/useGameEngine";
 
 export function ChatWindow(props) {
 	const messageContainerRef = useRef(null);

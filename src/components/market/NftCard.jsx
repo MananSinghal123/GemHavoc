@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader } from "./ui/card";
+import { Card, CardContent, CardHeader } from "../ui/card";
 
 const NftCard = ({ nft, children }) => {
   const [metadata, setMetadata] = useState(null);
